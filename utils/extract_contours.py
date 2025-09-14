@@ -1,27 +1,49 @@
 import numpy as np
 import cv2
-import json
-from typing import Any, List, Tuple
+from typing import List, Tuple
+import numpy as np
 
 
 def _filter_words(image: np.ndarray) -> np.ndarray:
     """
         Filter words
     """
-    image_8bit = image.astype(np.uint8)
     mask = np.where(np.sum(image, axis=-1) >= 550, 1, 0).astype(np.uint8)
     kernel = np.ones((3,3), dtype=np.uint8)
     dilated_mask = cv2.dilate(mask, kernel, iterations=3)
 
-    return cv2.inpaint(image_8bit, dilated_mask, inpaintRadius=3, flags=cv2.INPAINT_TELEA)
+    return cv2.inpaint(image.astype(np.uint8), dilated_mask, inpaintRadius=3, flags=cv2.INPAINT_TELEA)
+
+def _filter_foreground(image: np.ndarray) -> np.ndarray:
+    """
+        Filter those country boundaries inside the weather regions.
+    """
+    sharpen_kernel = np.array([
+                    [-1/2, -1/2, -1/2],
+                    [-1/2,    5, -1/2],
+                    [-1/2, -1/2, -1/2]
+                ])
+
+    filter_img = cv2.filter2D(image.astype(np.int16), -1, sharpen_kernel)
+
+    diff_kernel = np.array([
+                    [-1/2, -1/2, -1/2],
+                    [-1/2,    4, -1/2],
+                    [-1/2, -1/2, -1/2]
+                ])
+
+    filter_img = cv2.filter2D(filter_img, -1, diff_kernel)
+
+    mask = np.all(filter_img < -50, axis=-1).astype(np.uint8) * 255
+    kernel = np.ones((3,3), dtype=np.uint8)
+    dilated_mask = cv2.dilate(mask, kernel, iterations=3)
+
+    return cv2.inpaint(image, dilated_mask, inpaintRadius=3, flags=cv2.INPAINT_TELEA).astype(np.uint8)
 
 def _filter_background(image: np.ndarray) -> np.ndarray:
     """
         Filter background
     """
-    # Filter the words on image
-    image = _filter_words(image)
-
     # Calculate variance across the color channels for each pixel in a vectorized way
     pixel_var = np.var(image, axis=-1)
     
@@ -31,6 +53,10 @@ def _filter_background(image: np.ndarray) -> np.ndarray:
     background_converter = 1 - mask_3d
 
     return image * mask_3d + background_converter * 144
+
+def _preprocess(image: np.ndarray) -> np.ndarray:
+    image = _filter_background(_filter_words(image)).astype(np.uint8)
+    return _filter_foreground(image)
 
 def _convert_to_dbz(image: np.ndarray, arr_colors: np.ndarray):
     k = len(arr_colors)
@@ -71,7 +97,7 @@ def extract_contour_by_dbz(img: np.ndarray, thresholds: List[int], sorted_color:
                 - contours (List[np.ndarray]): A list of detected contours, each represented as an array of points.
                 - contour_colors (List(Tuple[int,int,int])): A list of color corresponding with each contours
     """
-    img = _filter_background(img).astype(np.uint8)
+    img = _preprocess(img)
 
     dbz_map = _convert_to_dbz(img, sorted_color).astype(np.uint8)
     
@@ -93,6 +119,5 @@ def extract_contour_by_dbz(img: np.ndarray, thresholds: List[int], sorted_color:
         contour_colors.append(mean_color)
         cv2.drawContours(blank_img, contour, -1, mean_color, 2)
 
-    # return ((region >= 0) & (region <= len(thresholds))).astype(np.uint8)
-
     return blank_img, contours, contour_colors
+
