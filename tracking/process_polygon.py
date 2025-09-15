@@ -4,7 +4,6 @@ from shapely.geometry import Polygon, Point
 from shapely.ops import unary_union
 import cv2
 import math
-from dataclasses import dataclass
 
 def _simplify_contour(contour: np.ndarray) -> np.ndarray:
     """
@@ -177,8 +176,3 @@ def compute_overlapping(
             overlapping_matrix[i, j], _ = _compute_overlapping_pair(pol_1, pol_2)
 
     return overlapping_matrix
-
-@dataclass
-class ShapeVector:
-    coord: Tuple[float, float]
-    vector: np.ndarray
