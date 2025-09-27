@@ -18,7 +18,7 @@ def _simplify_contour(contour: np.ndarray) -> np.ndarray:
         Returns:
             simplified_contour (np.ndarray): the simplified contour.
     """
-    epsilon = math.log(cv2.contourArea(contour))
+    epsilon = math.log(cv2.contourArea(contour)) / 2
     output_contour = cv2.approxPolyDP(contour, epsilon, True)
     return output_contour if len(output_contour) >= 3 else contour
 
