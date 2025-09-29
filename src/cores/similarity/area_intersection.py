@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-from src.contours.contours import StormObject
+from src.cores.contours import StormObject
 
 def area_intersection(storm1: StormObject, storm2: StormObject) -> float:
     """

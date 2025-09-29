@@ -1,7 +1,17 @@
 import cv2
 import numpy as np
+from shapely.geometry import Polygon
+from shapely.ops import unary_union
 
 from src.cores.contours import StormsMap
+
+def overlapping_storm_area(contour_1: Polygon, contour_2: Polygon) -> float:
+    """
+    Calculate the overlapping area between two contours.
+    """
+    intersection = contour_1.intersection(contour_2)
+    union = contour_1.union(contour_2)
+    return intersection.area / union.area if union.area > 0 else 0.0
 
 def overlapping_area(storm1: StormsMap, storm2: StormsMap) -> float:
     """
@@ -16,20 +26,7 @@ def overlapping_area(storm1: StormsMap, storm2: StormsMap) -> float:
     - Precision: The ratio of the overlapping area to the area of storm1.
     - Recall: The ratio of the overlapping area to the area of storm2.
     """
-    assert storm1.map_size == storm2.map_size, "Storm maps must be of the same size"
-
-    # Assuming StormsMap has a method to get the area as a set of coordinates
-    map1 = np.zeros(storm1.map_size, dtype=np.uint8)
-    map2 = np.zeros(storm2.map_size, dtype=np.uint8)
-
-    for storm in storm1.storms:
-        cv2.fillPoly(map1, [np.array(storm.contour)], 1)
-
-    for storm in storm2.storms:
-        cv2.fillPoly(map2, [np.array(storm.contour)], 1)
-
-    overlapping_area = cv2.bitwise_and(map1, map2)
-    return np.sum(overlapping_area)  # or calculate actual area if coordinates are in a specific format
+    return 
 
 def recall(pred_map: StormsMap, true_map: StormsMap) -> float:
     """

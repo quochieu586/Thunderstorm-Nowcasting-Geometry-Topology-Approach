@@ -1,9 +1,11 @@
 from .draw_2D import *
-from .preprocessing import _convert_to_dbz, _filter_background, _filter_foreground, _filter_words, _preprocess
-from .legend_color import sorted_color
+from .background_preprocessing import windy_preprocessing_pipeline
+from .legend_color import SORTED_COLOR
+from .polygons import convert_contours_to_polygons, convert_polygons_to_contours
 
 __all__ = [
     "read_image", "draw_orthogonal_hull", "write_image",
-    "_convert_to_dbz", "_filter_background", "_filter_foreground", "_filter_words", "_preprocess",
-    "sorted_color"
+    "windy_preprocessing_pipeline",
+    "SORTED_COLOR",
+    "convert_contours_to_polygons", "convert_polygons_to_contours"
 ]

@@ -3,14 +3,13 @@ import numpy as np
 from datetime import datetime
 from typing import Optional
 
-from src.nowcasting import BaseStormMotion, ConstantVectorMotion
+from shapely.geometry import Polygon
 
 THRESHOLD_DBZ = 30
 
 @dataclass
 class StormObject:
-    contour: np.ndarray                                         # List of points represent contours
+    contour: Polygon                                         # List of points represent contours
     max_dbz_centroid: int = THRESHOLD_DBZ                       # Maximum dBZ value of this object
-    id: int = -1
+    id: str = ""                                            # Unique ID of this object for tracking over time
     time_frame: Optional[datetime] = None
-    local_motion: BaseStormMotion = ConstantVectorMotion()      # Local motion of this object

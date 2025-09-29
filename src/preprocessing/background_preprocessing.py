@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from .legend_color import SORTED_COLOR
 
 def _filter_words(image: np.ndarray) -> np.ndarray:
     """
@@ -55,7 +56,10 @@ def _preprocess(image: np.ndarray) -> np.ndarray:
     image = _filter_background(_filter_words(image)).astype(np.uint8)
     return _filter_foreground(image)
 
-def _convert_to_dbz(image: np.ndarray, arr_colors: np.ndarray):
+def _convert_to_dbz(image: np.ndarray, arr_colors: np.ndarray) -> np.ndarray:
+    """
+    Convert the image to dBZ by interpolating from the provided color mapping.
+    """
     k = len(arr_colors)
     img_reshape = image.reshape(-1,3)
     arr = np.zeros(shape=[img_reshape.shape[0], k-1, 2])
@@ -76,3 +80,11 @@ def _convert_to_dbz(image: np.ndarray, arr_colors: np.ndarray):
     result = arr[np.arange(arr.shape[0]), min_distance_interval]
 
     return result[:,1].reshape(image.shape[:2])
+
+def windy_preprocessing_pipeline(image: np.ndarray) -> np.ndarray:
+    """
+        Preprocess the image and convert to dBZ.
+    """
+    img = _preprocess(image)
+    dbz_map = _convert_to_dbz(img, SORTED_COLOR).astype(np.uint8)
+    return dbz_map

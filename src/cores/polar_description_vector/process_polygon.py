@@ -1,16 +1,16 @@
-from typing import List, Tuple
+from typing import List, Tuple, Union
 import numpy as np
-from shapely.geometry import Polygon, Point
+from shapely.geometry import Point, Polygon
 from shapely.ops import unary_union
 import cv2
 import math
+from dataclasses import dataclass
 
-def _simplify_contour(contour: np.ndarray) -> np.ndarray:
+from src.preprocessing import convert_contours_to_polygons, convert_polygons_to_contours
+
+def simplify_contour(contour: np.ndarray) -> np.ndarray:
     """
         Reduce the vertices of contour, using Douglas-Peucker algorithm.
-        
-        Epsilon is chosen as:
-            epsilon = log(Area of contour)
 
         Args:
             contour (np.ndarray): the contour of storm.
@@ -22,77 +22,22 @@ def _simplify_contour(contour: np.ndarray) -> np.ndarray:
     output_contour = cv2.approxPolyDP(contour, epsilon, True)
     return output_contour if len(output_contour) >= 3 else contour
 
-def process_contours(contours: List[np.ndarray], area_threshold: int = 15) -> List[np.ndarray]:
-    """
-        Process the contours:
-            1. Drop the contour that its area is too small.
-            2. Simplify the contour.
-            3. Convert contours into polygons, fix case that polygon is not valid.
-            4. Sort  based on the area.
-
-        Args:
-            contours (List[np.ndarray]): a list of contours.
-            area_threshold (int, optional): the minimum area allowance, unit: pixel. Default is 15.
-
-        Returns:
-            processed_polygons (List[Polygons]): a list of processed polygons.
-    """
-
-    processed_contours = [_simplify_contour(contour) for contour in contours \
-                          if cv2.contourArea(contour) >= area_threshold]
-    processed_polygons = contours_to_polygons(processed_contours)
-    return sorted(processed_polygons, key= lambda x: x.area, reverse=True)
-
-def contours_to_polygons(contours: List[List[np.ndarray]]) -> List[Polygon]:
-    """
-        Convert the list of contours into the list of polygons.
-    """
-    if isinstance(contours[0], List):
-        contours = [contour for subcontours in contours for contour in subcontours]
-    
-    polygons = []
-    for contour in contours:
-        polygon = Polygon(contour.squeeze(axis=1))
-        if not polygon.is_valid:
-            polygon = polygon.buffer(0)
-
-        if polygon.geom_type == "MultiPolygon":
-            polygons.extend(list(polygon.geoms))
-        else:
-            polygons.append(polygon)
-    
-    return polygons
-
-def polygons_to_contours(polygons: List[Polygon]) -> List[np.ndarray]:
-    """
-        Convert a list  shapely Polygon back into a list of numpy contour format (N, 1, 2).
-    """
-    contours = []
-    for polygon in polygons:
-        if polygon.is_empty:
-            continue
-
-        # Take exterior coords (skip last point since shapely closes it automatically)
-        coords = np.array(polygon.exterior.coords[:-1], dtype=np.int32)
-        
-        # Reshape into OpenCV contour format
-        contours.append(coords.reshape(-1, 1, 2))
-
-    return contours
-
-def construct_shape_vector(polygons: List[Polygon], point: Tuple[float, float], radii = [20, 40, 60], num_sectors = 8):
+def construct_shape_vector(polygons: List[Union[np.ndarray, Polygon]], point: Tuple[float, float], radii = [20, 40, 60], num_sectors = 8):
     """
         Construct the shape vector of polygons around a point.
 
         Args:
-            polygons (List[Polygon]): a list of polygons.
+            polygons (List[np.ndarray]): a list of contours of polygons.
             point: (x, y) tuple (center point A).
             radii: a list of radius of sectors (default: [20, 40, 60]).
-            num_sectos: number of sectors (default: 8).
+            num_sectors: number of sectors (default: 8).
 
         Returns:
             features_vector: a feature vector of radii x num_sectors shape.
     """
+    if isinstance(polygons[0], np.ndarray):
+        polygons: list[Polygon] = convert_contours_to_polygons(polygons)
+
     poly_union = unary_union(polygons) if len(polygons) > 1 else polygons[0]
     A = Point(point)
 
@@ -103,7 +48,6 @@ def construct_shape_vector(polygons: List[Polygon], point: Tuple[float, float], 
             angle_end = (j + 1) * (360 / num_sectors)
 
             sector = construct_sector(A, radius=r, angle_start=angle_start, angle_end=angle_end)
-
             features_vector.append(poly_union.intersection(sector).area)
     
     for i in range(len(features_vector)):
@@ -114,7 +58,7 @@ def construct_shape_vector(polygons: List[Polygon], point: Tuple[float, float], 
     
     return np.array(features_vector)
 
-def construct_sector(center, radius, angle_start, angle_end, num_points=30):
+def construct_sector(center: np.ndarray, radius: float, angle_start: float, angle_end: float, num_points: int = 30) -> np.ndarray:
     """
         Make a sector (wedge) polygon.
         
@@ -127,8 +71,10 @@ def construct_sector(center, radius, angle_start, angle_end, num_points=30):
                 sector arc. Default to 30.
         
         Returns:
-            polygon (Polygon): The approximated polygon of the sector.
+            polygon (np.ndarray): The approximated polygon of the sector.
     """
+    center = Point(center)
+
     cx, cy = center.x, center.y
     angles = np.linspace(np.deg2rad(angle_start), np.deg2rad(angle_end), num_points)
     arc = [(cx + radius*np.cos(a), cy + radius*np.sin(a)) for a in angles]
