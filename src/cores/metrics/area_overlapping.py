@@ -26,15 +26,19 @@ def overlapping_area(storm1: StormsMap, storm2: StormsMap) -> float:
     - Precision: The ratio of the overlapping area to the area of storm1.
     - Recall: The ratio of the overlapping area to the area of storm2.
     """
-    return 
+    multi_poly1 = unary_union([storm.contour for storm in storm1.storms])
+    multi_poly2 = unary_union([storm.contour for storm in storm2.storms])
+
+    intersection = multi_poly1.intersection(multi_poly2)
+    return intersection.area if not intersection.is_empty else 0.0
 
 def recall(pred_map: StormsMap, true_map: StormsMap) -> float:
     """
     Percentage of actual storms area that model can predict correctly.
     """
     overlapping = overlapping_area(pred_map, true_map)
-    true_area = sum(cv2.contourArea(np.array(storm.contour)) for storm in true_map.storms)
-    
+    true_area = sum(storm.contour.area for storm in true_map.storms)
+
     return overlapping / true_area if true_area > 0 else 0.0
 
 def precision(pred_map: StormsMap, true_map: StormsMap) -> float:
@@ -42,8 +46,8 @@ def precision(pred_map: StormsMap, true_map: StormsMap) -> float:
     Percentage of predicted storms area that is actually correct.
     """
     overlapping = overlapping_area(pred_map, true_map)
-    pred_area = sum(cv2.contourArea(np.array(storm.contour)) for storm in pred_map.storms)
-    
+    pred_area = sum(storm.contour.area for storm in pred_map.storms)
+
     return overlapping / pred_area if pred_area > 0 else 0.0
 
 def f1_score(pred_map: StormsMap, true_map: StormsMap) -> float:

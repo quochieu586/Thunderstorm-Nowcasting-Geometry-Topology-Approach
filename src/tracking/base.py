@@ -1,78 +1,78 @@
-# from abc import abstractmethod, ABC
+from abc import ABC, abstractmethod
+from typing import Optional
+from scipy.optimize import linear_sum_assignment
+import numpy as np
 
-# from scipy.optimize import linear_sum_assignment
-# import numpy as np
+from src.cores.contours import StormObject, StormsMap
 
-# from src.contours import StormObject, StormsMap
+class BaseTracker(ABC):
+    """
+    Base class for storm tracking. In tracking steps, we match detected storms from two consecutive time frames
+    """
 
-# class BaseStormTracker:
-#     storms_map: list[StormsMap]
+    @abstractmethod
+    def _cost_function(self, storm1: StormObject, storm2: StormObject) -> float:
+        """
+        Calculate the cost of associating two storm objects.
+        
+        Parameters:
+            storm1 (StormObject): The first storm object.
+            storm2 (StormObject): The second storm object.
+        
+        Returns:
+            float: The cost of associating the two storm objects. This cost must range from 0 to 1, where 1 indicates a perfect match and 0 indicates absolutely no matching.
+        """
+        pass
 
-#     def __init__(self):
-#         self.storms_map = []
+    def construct_disparity_matrix(
+            self, storms_map1: StormsMap, storms_map2: StormsMap, include_matches: bool = True, cancel_threshold: float = 0.1
+        ) -> tuple[np.ndarray, Optional[list[tuple[int, int]]]]:
+        """
+        Construct a disparity matrix for the given storm maps.
 
-#     def track_storms(self, detected_storms: list[StormObject], previous_storms: list[StormObject]) -> list[StormObject]:
-#         """
-#             Track storms across frames using the Hungarian algorithm for optimal assignment.
+        Parameters:
+            storms_map1 (StormsMap): The first set of storm objects.
+            storms_map2 (StormsMap): The second set of storm objects.
+            include_matches (bool): Whether to include matched storm pairs in the output using Hungarian algorithm.
+            cancel_threshold (float): The threshold below which matches are considered invalid.
 
-#             Args:
-#                 detected_storms (List[StormObject]): The list of detected storms in the current frame.
-#                 previous_storms (List[StormObject]): The list of storms from the previous frame.
+        Returns:
+            cost_matrix (np.ndarray): The constructed disparity matrix.
+            matches (list of tuples): The list of matched storm pairs (index in storms_map1, index in storms_map2).
+        """
+        num_storms1 = len(storms_map1.storms)
+        num_storms2 = len(storms_map2.storms)
 
-#             Returns:
-#                 List[StormObject]: The list of tracked storms.
-#         """
-#         if not detected_storms or not previous_storms:
-#             return detected_storms
+        if num_storms1 == 0 or num_storms2 == 0:
+            return np.array([]), None
 
-#         # Create cost matrix
-#         cost_matrix = self._create_cost_matrix(detected_storms, previous_storms)
+        cost_matrix = np.zeros((num_storms1, num_storms2))
 
-#         # Solve assignment problem
-#         row_indices, col_indices = linear_sum_assignment(cost_matrix)
-
-#         # Map detected storms to previous storms
-#         tracked_storms = []
-#         for row, col in zip(row_indices, col_indices):
-#             if cost_matrix[row, col] < self.tracking_threshold:
-#                 tracked_storms.append(detected_storms[row])
-#             else:
-#                 tracked_storms.append(None)
-
-#         return tracked_storms
-
-#     def _create_cost_matrix(self,  ) -> np.ndarray:
-#         """
-#             Create a cost matrix for the Hungarian algorithm.
-
-#             Args:
-#                 detected_storms (List[StormObject]): The list of detected storms in the current frame.
-#                 previous_storms (List[StormObject]): The list of storms from the previous frame.
-
-#             Returns:
-#                 np.ndarray: The cost matrix.
-#         """
-#         cost_matrix = np.zeros((len(detected_storms), len(previous_storms)))
-
-#         for i, detected in enumerate(detected_storms):
-#             for j, previous in enumerate(previous_storms):
-#                 cost_matrix[i, j] = self._compute_cost(detected, previous)
-
-#         return cost_matrix
-
-#     @
-#     def _compute_cost(self, detected: StormObject, previous: StormObject) -> float:
-#         """
-#             Compute the cost of assigning a detected storm to a previous storm.
-
-#             Args:
-#                 detected (StormObject): The detected storm.
-#                 previous (StormObject): The previous storm.
-
-#             Returns:
-#                 float: The computed cost.
-#         """
-#         # Implement your cost function here
-#         return np.linalg.norm(detected.centroid - previous.centroid)
+        for i, storm1 in enumerate(storms_map1.storms):
+            for j, storm2 in enumerate(storms_map2.storms):
+                cost_matrix[i, j] = self._cost_function(storm1, storm2)
+        
+        if not include_matches:
+            return cost_matrix, None
+        
+        row_ind, col_ind = linear_sum_assignment(-cost_matrix)
+        matches = [(i, j) for i, j in zip(row_ind, col_ind) if cost_matrix[i, j] > cancel_threshold]
+        return cost_matrix, matches
     
-#     def matching_pairs(self, dectected)
+    def hungarian_matching(self, cost_matrix: np.ndarray, cancel_threshold: float = 0.1) -> list[tuple[int, int]]:
+        """
+        Perform Hungarian matching on the given cost matrix.
+
+        Parameters:
+            cost_matrix (np.ndarray): The cost matrix.
+            cancel_threshold (float): The threshold below which matches are considered invalid.
+
+        Returns:
+            matches (list of tuples): The list of matched storm pairs (index in first set, index in second set).
+        """
+        if cost_matrix.size == 0:
+            return []
+        
+        row_ind, col_ind = linear_sum_assignment(-cost_matrix)
+        matches = [(i, j) for i, j in zip(row_ind, col_ind) if cost_matrix[i, j] > cancel_threshold]
+        return matches

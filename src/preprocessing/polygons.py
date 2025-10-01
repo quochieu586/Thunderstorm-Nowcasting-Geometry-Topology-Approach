@@ -6,6 +6,8 @@ def convert_contours_to_polygons(contours: list[Union[np.ndarray, list[np.ndarra
     """
         Convert the list of contours into the list of polygons.
     """
+    if not contours:
+        return []
     if isinstance(contours[0], list):
         contours = [contour for subcontours in contours for contour in subcontours]
     
