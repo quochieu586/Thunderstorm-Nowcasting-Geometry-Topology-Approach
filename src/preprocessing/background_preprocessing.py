@@ -1,8 +1,6 @@
-import numpy as np
 import cv2
-from typing import List, Tuple
 import numpy as np
-
+from .legend_color import SORTED_COLOR
 
 def _filter_words(image: np.ndarray) -> np.ndarray:
     """
@@ -58,7 +56,10 @@ def _preprocess(image: np.ndarray) -> np.ndarray:
     image = _filter_background(_filter_words(image)).astype(np.uint8)
     return _filter_foreground(image)
 
-def _convert_to_dbz(image: np.ndarray, arr_colors: np.ndarray):
+def _convert_to_dbz(image: np.ndarray, arr_colors: np.ndarray) -> np.ndarray:
+    """
+    Convert the image to dBZ by interpolating from the provided color mapping.
+    """
     k = len(arr_colors)
     img_reshape = image.reshape(-1,3)
     arr = np.zeros(shape=[img_reshape.shape[0], k-1, 2])
@@ -80,44 +81,10 @@ def _convert_to_dbz(image: np.ndarray, arr_colors: np.ndarray):
 
     return result[:,1].reshape(image.shape[:2])
 
-def extract_contour_by_dbz(img: np.ndarray, thresholds: List[int], sorted_color: list[Tuple[Tuple[int, int, int], int]]):
+def windy_preprocessing_pipeline(image: np.ndarray) -> np.ndarray:
     """
-        Draw the DBZ contour for the image.
-
-        Args:
-            img: source image.
-            thresholds: dbz thresholds for drawing contours.
-            sorted_color: a list of tuples where each tuple includes:
-                - a color represented as an RGB triplet (e.g., (R, G, B)).
-                - a corresponding dBZ value, sorted in increasing order of dBZ.
-        
-        Returns:
-            Tuple[np.ndarray,List[np.ndarray]]: A tuple containing:
-                - contour_img (np.ndarray): A blank image with the extracted contours drawn.
-                - contours (List[np.ndarray]): A list of detected contours, each represented as an array of points.
-                - contour_colors (List(Tuple[int,int,int])): A list of color corresponding with each contours
+        Preprocess the image and convert to dBZ.
     """
-    img = _preprocess(img)
-
-    dbz_map = _convert_to_dbz(img, sorted_color).astype(np.uint8)
-    
-    blank_img = np.ones(shape=img.shape, dtype=np.uint8) * 255
-
-    # Get the region
-    region = np.digitize(dbz_map, bins=thresholds).astype(np.uint8)      # 99.9: background
-    contours = []
-    contour_colors = []
-
-    # Draw the contour
-    for idx in range(len(thresholds)):
-        color_layer = ((region >= idx+1) & (region <= len(thresholds))).astype(np.uint8)
-
-        mean_color = img[region == idx + 1].mean(axis=0)
-        contour, _ = cv2.findContours(color_layer, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-        contours.append(contour)
-        contour_colors.append(mean_color)
-        cv2.drawContours(blank_img, contour, -1, mean_color, 2)
-
-    return blank_img, contours, contour_colors
-
+    img = _preprocess(image)
+    dbz_map = _convert_to_dbz(img, SORTED_COLOR).astype(np.uint8)
+    return dbz_map
