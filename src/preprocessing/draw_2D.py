@@ -1,11 +1,24 @@
 import cv2
 import numpy as np
+import xarray as xr
 from typing import Tuple, Any, Union
+from pathlib import Path
 import matplotlib.pyplot as plt
+
 
 def read_image(path: str):
     img = cv2.imread(path)
     return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+def read_grib(path: Path):
+    ds = xr.open_dataset(path, engine='cfgrib',backend_kwargs={"decode_timedelta": True})
+    # print(ds)  # Show dataset metadata
+
+    # Pick the first data variable (e.g., reflectivity)
+    var = list(ds.data_vars)[0]
+    data = ds[var]
+    arr = data.squeeze().values
+    return arr
 
 def draw_orthogonal_hull(orthogonal_hull: Union[list, Any], image: np.ndarray, color: Tuple[int, int, int] = (0,0,255)):
 
