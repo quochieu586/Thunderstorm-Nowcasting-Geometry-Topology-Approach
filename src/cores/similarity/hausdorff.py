@@ -1,14 +1,11 @@
-from scipy.spatial.distance import directed_hausdorff
 from src.cores.contours import StormObject
+from shapely import hausdorff_distance
 
-def hausdorff_distance(storm1: StormObject, storm2: StormObject) -> float:
+def compute_hausdorff_distance(storm1: StormObject, storm2: StormObject) -> float:
     """
     Compute the Hausdorff distance between two storm objects.
     """
-    c1 = storm1.contour.reshape(-1, 2)
-    c2 = storm2.contour.reshape(-1, 2)
-
-    d1 = directed_hausdorff(c1, c2)[0]
-    d2 = directed_hausdorff(c2, c1)[0]
-
+    d1 = hausdorff_distance(storm1.contour, storm2.contour)
+    d2 = hausdorff_distance(storm2.contour, storm1.contour)
+    
     return max(d1, d2)
