@@ -88,3 +88,11 @@ def windy_preprocessing_pipeline(image: np.ndarray) -> np.ndarray:
     img = _preprocess(image)
     dbz_map = _convert_to_dbz(img, SORTED_COLOR).astype(np.uint8)
     return dbz_map
+
+
+def mrms_preprocessing_pipeline(grid: np.ndarray) -> np.ndarray:
+    """
+        Preprocess the mrms dBZ grids.
+        So far this doens't do anything other than just providing abstraction.
+    """
+    return grid
