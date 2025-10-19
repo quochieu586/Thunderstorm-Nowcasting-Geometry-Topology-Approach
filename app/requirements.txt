@@ -1,0 +1,6 @@
+# Streamlit App Requirements
+# Additional requirements for the UI application
+
+streamlit>=1.28.0
+matplotlib>=3.7.0
+plotly>=5.15.0
