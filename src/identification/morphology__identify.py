@@ -3,32 +3,32 @@ import cv2
 import numpy as np
 
 class MorphContourIdentifier(BaseStormIdentifier):
-    def __init__(self):
-        super().__init__()
-    
-    def identify_storm(
-        self, dbz_map: np.ndarray, threshold: int, n_thresh: int,
-        filter_area: int = 30, center_filter: int = 10
-    ) -> list[np.ndarray]:
+    def __init__(self, threshold: int = 30, n_thresh: int = 3, filter_area: int = 30, center_filter: int = 10):
+        self.threshold = threshold
+        self.n_thresh = n_thresh
+        self.filter_area = filter_area
+        self.center_filter = center_filter
+
+    def identify_storm(self, dbz_map: np.ndarray) -> list[np.ndarray]:
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3,3))
 
         # erode for removing weak connection
-        lowest_mask = cv2.erode((dbz_map > threshold).astype(np.uint8), kernel)
+        lowest_mask = cv2.erode((dbz_map > self.threshold).astype(np.uint8), kernel)
         num_labels, labels = cv2.connectedComponents(lowest_mask, connectivity=8)
 
         masks = []
         for label in range(1, num_labels):
             mask = cv2.dilate((labels == label).astype(np.uint8), kernel)
-            if np.sum(mask) > filter_area:
+            if np.sum(mask) > self.filter_area:
                 masks.append(mask)
 
-        for i in range(2, n_thresh+1):
+        for i in range(2, self.n_thresh+1):
             current_masks = []
             for roi_mask in masks:
-                if np.sum(roi_mask) < filter_area:
+                if np.sum(roi_mask) < self.filter_area:
                     current_masks.append(roi_mask)
                     continue
-                current_masks.extend(self._extract_substorms(dbz_map, roi_mask, kernel, threshold=threshold + 5*(i-1), area_filter=center_filter))
+                current_masks.extend(self._extract_substorms(dbz_map, roi_mask, kernel, threshold=self.threshold + 5*(i-1), area_filter=self.center_filter))
 
             masks = current_masks
 

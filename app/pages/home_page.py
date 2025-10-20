@@ -15,10 +15,10 @@ from typing import Optional
 # Add src to path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
-from src.cores.contours import StormsMap
+from src.cores.base import StormsMap
 from config.app_config import AppConfig
 
-from app.components.data_processor import DataProcessor
+from app.cores.data_processor import DataProcessor
 from app.utils import draw_contours
 
 class HomePage:

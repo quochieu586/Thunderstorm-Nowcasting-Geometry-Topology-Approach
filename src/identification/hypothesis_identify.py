@@ -17,37 +17,40 @@ class HypothesisIdentifier(BaseStormIdentifier):
     Returns:
         contours (list[np.ndarray]): List of contours.
     """
+
+    def __init__(self, threshold: int, filter_area: int = 20, distance_dbz_threshold: int = 5, filter_center: float = 10):
+        self.threshold = threshold
+        self.filter_area = filter_area
+        self.distance_dbz_threshold = distance_dbz_threshold
+        self.filter_center = filter_center
+
     def identify_storm(
-        self, dbz_map: np.ndarray, threshold: int, filter_area = 20, distance_dbz_threshold = 5, filter_center = 10
-) -> list[np.ndarray]:
+        self, dbz_map: np.ndarray
+    ) -> list[np.ndarray]:
         """
             Draw the DBZ contour for the image.
 
             Args:
                 dbz_map: image where each pixel represents the dBZ value.
-                thresholds: dbz thresholds for drawing contours.
-                filter_area: the minimum area of a storm to be considered valid. Use to filter out those small storms.
-                distance_dbz_threshold: the distance between each jump.
-                subcells_check: whether to check for subcells within detected storms.
             Returns:
                 List[np.ndarray]: A list of detected contours, each represented as an array of points.
         """
         contours = []
-        lowest_mask = (dbz_map >= threshold).astype(np.uint8)
+        lowest_mask = (dbz_map >= self.threshold).astype(np.uint8)
 
         # extract connected components
         num_labels, labels = cv2.connectedComponents(lowest_mask, connectivity=8)
         
         for label in range(1, num_labels):
             roi_mask = (labels == label).astype(np.uint8)
-            if np.sum(roi_mask) < filter_area:  # case small storm => filter out
+            if np.sum(roi_mask) < self.filter_area:  # case small storm => filter out
                 continue
 
             M = float(np.where(roi_mask, dbz_map, 0).max())
-            F = float(threshold)
-            D = float(distance_dbz_threshold)
+            F = float(self.threshold)
+            D = float(self.distance_dbz_threshold)
 
-            contours.extend(self._process_subcells(dbz_map, roi_mask, F, M, D, filter_center))
+            contours.extend(self._process_subcells(dbz_map, roi_mask, F, M, D, self.filter_center))
 
         return contours
 

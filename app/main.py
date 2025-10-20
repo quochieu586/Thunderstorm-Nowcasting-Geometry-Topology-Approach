@@ -15,7 +15,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from config.app_config import AppConfig
 from pages.home_page import HomePage
 from components.sidebar import Sidebar
-from components.data_processor import DataProcessor
+from app.cores.data_processor import DataProcessor
 
 def main():
     """Main application entry point"""

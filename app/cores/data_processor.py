@@ -18,7 +18,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from src.preprocessing import read_image, windy_preprocessing_pipeline, convert_contours_to_polygons
 
-from src.cores.contours import StormsMap
+from src.cores.base import StormsMap
 from src.identification import BaseStormIdentifier
 
 from app.config import AppConfig, IDENTIFICATION_METHODS
@@ -70,15 +70,12 @@ class DataProcessor:
 
             # Get the appropriate identifier
             identifier = self.identifiers.get(identification_method)
+            identifier.set_params(threshold=threshold, filter_area=filter_area)
             if identifier is None or not isinstance(identifier, BaseStormIdentifier):
                 raise ValueError(f"Unknown identification method: {identification_method}")
 
             # Identify contours
-            contours = identifier.identify_storm(
-                dbz_map, 
-                threshold=threshold,
-                filter_area=filter_area
-            )
+            contours = identifier.identify_storm(dbz_map)
             
             # Convert contours to polygons
             polygons = convert_contours_to_polygons(contours)

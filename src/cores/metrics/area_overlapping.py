@@ -3,7 +3,7 @@ import numpy as np
 from shapely.geometry import Polygon
 from shapely.ops import unary_union
 
-from src.cores.contours import StormsMap
+from src.cores.base import StormsMap
 
 def overlapping_storm_area(contour_1: Polygon, contour_2: Polygon) -> float:
     """

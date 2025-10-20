@@ -1,7 +1,7 @@
 import os
 from src.identification import (
     SimpleContourIdentifier, HypothesisIdentifier,
-    MorphContourIdentifier, ClusterIdentifier
+    MorphContourIdentifier, ClusterIdentifier, BaseStormIdentifier
 )
 
 BASE_FOLDER = "data/images"
@@ -16,9 +16,9 @@ def get_all_images(folder: str):
     
     return images
 
-IDENTIFICATION_METHODS = {
-    "Simple Contour": SimpleContourIdentifier(),
-    "Hypothesis": HypothesisIdentifier(),
-    "Morphology": MorphContourIdentifier(),
-    "Cluster": ClusterIdentifier()
+IDENTIFICATION_METHODS: dict[str, BaseStormIdentifier] = {
+    "Simple Contour": SimpleContourIdentifier(threshold=30, filter_area=50),
+    "Hypothesis": HypothesisIdentifier(threshold=30, filter_area=50, distance_dbz_threshold=5, filter_center=10),
+    "Morphology": MorphContourIdentifier(threshold=30, n_thresh=3, filter_area=50, center_filter=10),
+    "Cluster": ClusterIdentifier(thresholds=[30, 35, 40, 45, 50], filter_area=50, filter_center=10)
 }

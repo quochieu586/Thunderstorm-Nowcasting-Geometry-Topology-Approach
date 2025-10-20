@@ -1,6 +1,5 @@
-from abc import ABC
+from .contours import StormObject
+from .contours_map import StormsMap
+from .base_object import BaseObject
 
-class BaseObject(ABC):
-    pass
-
-__all__ = ["BaseObject"]
+__all__ = ["StormObject", "StormsMap", "BaseObject"]

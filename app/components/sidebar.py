@@ -9,7 +9,7 @@ import streamlit as st
 from typing import Optional
 
 from config.app_config import AppConfig
-from .data_processor import DataProcessor
+from app.cores.data_processor import DataProcessor
 
 class Sidebar:
     """Sidebar component for application controls"""

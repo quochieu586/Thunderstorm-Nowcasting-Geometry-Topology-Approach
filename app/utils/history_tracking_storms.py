@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 
 from shapely.geometry import Polygon
-from src.cores.contours import StormObject
+from src.cores.base import StormObject
 
 class StormWithMovements(StormObject):
     history_centroids: list[tuple[int, int]]
