@@ -16,8 +16,8 @@ from typing import Optional
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from src.cores.base import StormsMap
-from config.app_config import AppConfig
 
+from app.config import AppConfig
 from app.cores.data_processor import DataProcessor
 from app.utils import draw_contours
 
@@ -34,17 +34,17 @@ class HomePage:
     def _process_and_display_current_scan(self) -> None:
         """Process and display the current scan with storm identification"""
         selected_folder = st.session_state.get('selected_folder')
-        identification_method = st.session_state.get('identification_method', 'Simple Contour')
+        precipitation_model = st.session_state.get('precipitation_model', 'Simple Contour')
         threshold = st.session_state.get('dbz_threshold', 35)
         filter_area = st.session_state.get('filter_area', 20)
         scan_index = st.session_state.get('current_scan_index', 0)
 
-        print(f"Rendering... . Processing scan with parameters: threshold={threshold}, filter_area={filter_area}, selected_folder={selected_folder}, identification_method={identification_method}, scan_index={scan_index}")
-        
+        print(f"Rendering... . Processing scan with parameters: precipitation_model={precipitation_model}, threshold={threshold}, filter_area={filter_area}, selected_folder={selected_folder}, scan_index={scan_index}")
+
         try:
             with st.spinner("🔄 Processing radar data and identifying storms..."):
                 # Process the current scan using DataProcessor's centralized state
-                result = self.global_data_processor.identify_storms(selected_folder=selected_folder, scan_index=scan_index, identification_method=identification_method, threshold=threshold, filter_area=filter_area)
+                result = self.global_data_processor.identify_storms(selected_folder=selected_folder, scan_index=scan_index, precipitation_model=precipitation_model, threshold=threshold, filter_area=filter_area)
 
             if result is None:
                 st.warning("No folder selected or no images available")

@@ -12,9 +12,10 @@ import os
 # Add src to path for imports
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-from config.app_config import AppConfig
 from pages.home_page import HomePage
 from components.sidebar import Sidebar
+
+from app.config import AppConfig
 from app.cores.data_processor import DataProcessor
 
 def main():

@@ -4,21 +4,23 @@ from src.identification import (
     MorphContourIdentifier, ClusterIdentifier, BaseStormIdentifier
 )
 
+from src.models import (
+    BasePrecipitationModeling, SimplePrecipitationModel, ETitanPrecipitationModel
+)
+
 BASE_FOLDER = "data/images"
 IMAGES_FOLDER = os.listdir(os.path.join(BASE_FOLDER))
 
-def get_all_images(folder: str):
-    """
-    Get all images in files
-    """
-    images = [file for file in os.listdir(os.path.join(BASE_FOLDER, folder)) if file.endswith('.png') or file.endswith('.jpg')]
-    images.sort(reverse=False)
-    
-    return images
+MODELS = dict[str]
 
 IDENTIFICATION_METHODS: dict[str, BaseStormIdentifier] = {
-    "Simple Contour": SimpleContourIdentifier(threshold=30, filter_area=50),
-    "Hypothesis": HypothesisIdentifier(threshold=30, filter_area=50, distance_dbz_threshold=5, filter_center=10),
-    "Morphology": MorphContourIdentifier(threshold=30, n_thresh=3, filter_area=50, center_filter=10),
-    "Cluster": ClusterIdentifier(thresholds=[30, 35, 40, 45, 50], filter_area=50, filter_center=10)
+    "Simple Contour": SimpleContourIdentifier(),
+    "Hypothesis": HypothesisIdentifier(distance_dbz_threshold=5, filter_center=10),
+    "Morphology": MorphContourIdentifier(n_thresh=3, center_filter=10),
+    "Cluster": ClusterIdentifier(filter_center=10)
+}
+
+PRECIPITATION_MODELS: dict[str, BasePrecipitationModeling] = {
+    "Simple Precipitation Model": SimplePrecipitationModel(SimpleContourIdentifier()),
+    "ETitan Precipitation Model": ETitanPrecipitationModel(MorphContourIdentifier(n_thresh=3, center_filter=10))
 }

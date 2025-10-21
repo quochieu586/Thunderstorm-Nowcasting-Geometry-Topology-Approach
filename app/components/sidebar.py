@@ -8,7 +8,7 @@ and processing parameter controls.
 import streamlit as st
 from typing import Optional
 
-from config.app_config import AppConfig
+from app.config import AppConfig
 from app.cores.data_processor import DataProcessor
 
 class Sidebar:
@@ -59,27 +59,23 @@ class Sidebar:
     
     def _render_identification_selection(self) -> None:
         """
-        Render identification method selection
+        Render nowcasting method selection
         """
-        st.subheader("🔍 Identification Method")
-        
-        identification_methods = self.config.get_identification_methods()
+        st.subheader("🔍 Nowcasting Method")
+        precipitation_methods = self.config.precipitation_models
 
         selected_method = st.selectbox(
-            "Choose Identification Method:",
-            options=identification_methods,
+            "Choose Precipitation Model:",
+            options=precipitation_methods,
             index=0,
-            key="identification_method",
-            help="Select the storm identification algorithm to use",
+            key="precipitation_model",
+            help="Select the storm precipitation model to use",
             on_change=(lambda: self.global_data_processor.clear_storms_cache())
         )
-        
-        # Display method information
+
         method_descriptions = {
-            "Simple Contour": "Identifies storms as contiguous pixels above DBZ threshold",
-            "Hypothesis": "Uses dilation from maximum centers for subcell processing",
-            "Morphology": "Applies morphological operations for storm detection",
-            "Cluster": "Uses clustering algorithms to identify storm regions"
+            "Simple Precipitation Model": "Identifies storms as contiguous pixels above DBZ threshold, use polar shape vectors & FFT for matching - tracking",
+            "ETitan Precipitation Model": "Identifies storms using morphological operations: dilation and erosion"
         }
         
         if selected_method in method_descriptions:

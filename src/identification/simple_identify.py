@@ -8,11 +8,7 @@ class SimpleContourIdentifier(BaseStormIdentifier):
     """
         Detect storm objects solely based on the contiguous spatial areas of pixels exceeding specified dBZ thresholds. 
     """
-    def __init__(self, threshold: int = 20, filter_area: int = 50):
-        self.threshold = threshold
-        self.filter_area = filter_area
-
-    def identify_storm(self, dbz_map: np.ndarray) -> list[np.ndarray]:
+    def identify_storm(self, dbz_map: np.ndarray, threshold: int = 20, filter_area: int = 50) -> list[np.ndarray]:
         """
             Draw the DBZ contour for the image.
 
@@ -24,11 +20,11 @@ class SimpleContourIdentifier(BaseStormIdentifier):
         """
 
         # Get the region
-        region = (dbz_map >= self.threshold).astype(np.uint8)
+        region = (dbz_map >= threshold).astype(np.uint8)
 
         # Draw the contour
         contours, _ = cv2.findContours(region, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        contours = [polygon for polygon in contours if cv2.contourArea(polygon) >= self.filter_area]
+        contours = [polygon for polygon in contours if cv2.contourArea(polygon) >= filter_area]
         contours = sorted(contours, key=lambda x: cv2.contourArea(x), reverse=True)
 
         return contours

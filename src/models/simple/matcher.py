@@ -7,7 +7,7 @@ from src.tracking import BaseMatcher
 from src.cores.metrics import overlapping_storm_area
 from src.cores.base import StormsMap
 
-from .storm_with_shape_vectors import StormShapeVectors
+from .storm import StormShapeVectors
 
 RADII = [20, 40, 60, 80, 100, 120]
 NUM_SECTORS = 8
@@ -15,20 +15,14 @@ CIRCLE_AREA = RADII[-1] * RADII[-1] * np.pi
 CLUSTER_COUNT = 2
 
 class PolarVectorMatcher(BaseMatcher):
-    def __init__(self, discard_threshold: float = 0.1):
+    def __init__(self, discard_threshold: float = 0.2):
         self.discard_threshold = discard_threshold
 
     def _compute_similarity_pair(self, vector_1: np.ndarray, vector_2: np.ndarray, circle_area: float):
         return np.linalg.norm((vector_1 - vector_2)) / circle_area
 
-    def _compute_valid_pairs(
-        self,
-        prev_storm: StormShapeVectors,
-        curr_storm: StormShapeVectors,
-        circle_area: float,
-        maximum_displacement: float = 10,
-        thresholds: list[float] = [0.05, 0.08, 0.1]
-    ) -> list[tuple[float, float]]:
+    def _compute_valid_pairs(self, prev_storm: StormShapeVectors, curr_storm: StormShapeVectors, circle_area: float, 
+                             maximum_displacement: float = 10, thresholds: list[float] = [0.05, 0.08, 0.1]) -> list[tuple[float, float]]:
         """
             Compute movement between two lists of shape vectors. For all pairs of points between two storms, if the similarity score is below a certain threshold and the distance between two points is below a certain maximum displacement, we consider this pair as a valid movement. If the number of valid movements exceeds 20% of the number of vertices, we return this list of movements.
 
@@ -66,7 +60,7 @@ class PolarVectorMatcher(BaseMatcher):
         
         return []
 
-    def _get_translate_vector(displacement_list: list[tuple[float, float]], cluster_counts: int=CLUSTER_COUNT) -> tuple[float, float, np.ndarray]:
+    def _get_translate_vector(self, displacement_list: list[tuple[float, float]], cluster_counts: int=CLUSTER_COUNT) -> tuple[float, float, np.ndarray]:
         """
         From list of displacements, use K-means clustering to find the largest cluster and return its center as the overall translation vector.
         Return the translation vector (x_offset, y_offset) and the labels of each displacement point for visualization.
@@ -90,7 +84,7 @@ class PolarVectorMatcher(BaseMatcher):
         predicted_polygon = translate(prev_contour.contour, xoff=xoff, yoff=yoff)
         overlapping = overlapping_storm_area(predicted_polygon, curr_contour.contour)
 
-        return 1 - overlapping
+        return overlapping
     
     def _construct_disparity_matrix(
             self, storm_lst1: list[StormShapeVectors], storm_lst2: list[StormShapeVectors]
@@ -103,7 +97,7 @@ class PolarVectorMatcher(BaseMatcher):
 
         for i, prev_storm in enumerate(storm_lst1):
             for j, curr_storm in enumerate(storm_lst2):
-                disparity_matrix[i, j] = self._cost_function(prev_storm, curr_storm)
+                disparity_matrix[i, j] = -self._cost_function(prev_storm, curr_storm)
 
         return disparity_matrix
     
@@ -121,6 +115,6 @@ class PolarVectorMatcher(BaseMatcher):
         disparity_matrix = self._construct_disparity_matrix(storm_1.storms, storm_2.storms)
         prev_indices, curr_indices = linear_sum_assignment(disparity_matrix)
 
-        assignments = [(prev_idx, curr_idx) for prev_idx, curr_idx in zip(prev_indices, curr_indices) if disparity_matrix[prev_idx, curr_idx] < self.discard_threshold]
+        assignments = [(prev_idx, curr_idx) for prev_idx, curr_idx in zip(prev_indices, curr_indices) if -disparity_matrix[prev_idx, curr_idx] > self.discard_threshold]
 
         return assignments
