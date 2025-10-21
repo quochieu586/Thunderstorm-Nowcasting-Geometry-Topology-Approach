@@ -1,5 +1,10 @@
 from .simple import SimplePrecipitationModel
+from .ata_2021 import AdaptiveTrackingPrecipitationModel
 from .etitan_2009 import ETitanPrecipitationModel
-from .base import BasePrecipitationModeling
+from .titan_1993 import TitanPrecipitationModel
+from .ours import OursPrecipitationModel
 
-__all__ = ["SimplePrecipitationModel", "BasePrecipitationModeling", "ETitanPrecipitationModel"]
+from .base import BasePrecipitationModel
+
+__all__ = ["SimplePrecipitationModel", "BasePrecipitationModel", "ETitanPrecipitationModel", 
+           "TitanPrecipitationModel", "OursPrecipitationModel", "AdaptiveTrackingPrecipitationModel"]

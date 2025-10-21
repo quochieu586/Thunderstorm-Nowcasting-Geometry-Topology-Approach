@@ -9,30 +9,18 @@ import os
 from typing import List
 from datetime import datetime
 
-from .source_config import BASE_FOLDER, IMAGES_FOLDER, IDENTIFICATION_METHODS, PRECIPITATION_MODELS
+from ..source_config import BASE_FOLDER
+from .base import BaseAppConfig
 
-class ProcessingConfig:
-    """Configuration for storm identification and processing"""
-    
-    def __init__(self):
-        self.default_threshold: int = 35
-        self.default_filter_area: int = 20
-        self.available_thresholds: List[int] = [20, 25, 30, 35, 40, 45, 50]
-        self.available_filter_areas: List[int] = [5, 10, 15, 20, 25, 30, 40, 50]
-
-
-class WindyAppConfig:
+class WindyAppConfig(BaseAppConfig):
     """Main application configuration class"""
+    data_root: str
+    available_datasets: List[str]
     
     def __init__(self):
         # Get the data paths from map_setup
         self.data_root = BASE_FOLDER
-        self.available_folders = IMAGES_FOLDER
-        self.processing = ProcessingConfig()
-        
-        # Available identification methods
-        self.identification_methods = IDENTIFICATION_METHODS
-        self.precipitation_models = PRECIPITATION_MODELS
+        self.available_datasets = os.listdir(os.path.join(BASE_FOLDER))
 
     def get_time_frame(self, folder_name: int, idx: int) -> datetime:
         """Get time frame (image filename) in the specified folder"""
@@ -44,9 +32,9 @@ class WindyAppConfig:
         time = datetime.strptime(images_name[idx].split(".")[0], "%Y%m%d-%H%M%S")
         return time
 
-    def get_available_folders(self) -> List[str]:
+    def get_available_datasets(self) -> List[str]:
         """Get list of available folder names from data/images"""
-        return self.available_folders
+        return self.available_datasets
     
     def get_images_in_folder(self, folder_name: str) -> List[str]:
         """Get list of image files in the specified folder"""
@@ -54,10 +42,6 @@ class WindyAppConfig:
         images.sort(reverse=False)
         
         return images
-    
-    def get_identification_methods(self) -> List[str]:
-        """Get list of available identification method names"""
-        return list(self.identification_methods.keys())
 
     def get_filename(self, folder_name: str, index: int) -> str:
         """Get the filename at the specified index in the given folder"""

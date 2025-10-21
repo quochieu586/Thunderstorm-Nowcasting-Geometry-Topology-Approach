@@ -8,12 +8,13 @@ and processing parameter controls.
 import streamlit as st
 from typing import Optional
 
-from app.config import AppConfig
+from app.config.app_config import BaseAppConfig
+from app.config.source_config import FILTER_AREA_OPTIONS, THRESHOLD_OPTIONS, PRECIPITATION_MODELS
 from app.cores.data_processor import DataProcessor
 
 class Sidebar:
     """Sidebar component for application controls"""
-    def __init__(self, config: AppConfig, global_data_processor: DataProcessor):
+    def __init__(self, config: BaseAppConfig, global_data_processor: DataProcessor):
         self.config = config
         self.global_data_processor = global_data_processor
         self.maximum_scans: Optional[int] = None  # Number of scans in the selected folder
@@ -37,24 +38,31 @@ class Sidebar:
 
             # Scan index control
             self._render_scan_index_control()
+
+    def _reset_scanning(self, clear_cache: bool) -> None:
+        """Reset scanning index to zero"""
+        st.session_state.current_scan_index = 0
+        if clear_cache:
+            self.global_data_processor.clear_storms_cache()
     
     def _render_dataset_selection(self) -> None:
         """Render dataset selection controls"""
         st.subheader("Dataset Selection")
         
-        available_folders = self.config.get_available_folders()
+        available_datasets = self.config.get_available_datasets()
         
-        if not available_folders:
+        if not available_datasets:
             st.warning("No datasets found in data directory")
             return
         
         # Dataset selector
         st.selectbox(
             "Choose Location/Dataset:",
-            options=available_folders,
+            options=available_datasets,
             index=0,
             key="selected_folder",
             help="Select a geographical location or dataset to analyze",
+            on_change=(lambda: self._reset_scanning(clear_cache=False))
         )
     
     def _render_identification_selection(self) -> None:
@@ -62,11 +70,10 @@ class Sidebar:
         Render nowcasting method selection
         """
         st.subheader("🔍 Nowcasting Method")
-        precipitation_methods = self.config.precipitation_models
 
         selected_method = st.selectbox(
             "Choose Precipitation Model:",
-            options=precipitation_methods,
+            options=PRECIPITATION_MODELS.keys(),
             index=0,
             key="precipitation_model",
             help="Select the storm precipitation model to use",
@@ -88,21 +95,21 @@ class Sidebar:
         # DBZ Threshold
         st.select_slider(
             "DBZ Threshold:",
-            options=self.config.processing.available_thresholds,
-            value=self.config.processing.default_threshold,
+            options=THRESHOLD_OPTIONS,
+            value=THRESHOLD_OPTIONS[3],
             key="dbz_threshold",
             help="Minimum DBZ value to consider for storm identification",
-            on_change=(lambda: self.global_data_processor.clear_storms_cache())
+            on_change=(lambda: self._reset_scanning(clear_cache=True))
         )
         
         # Filter Area
         st.select_slider(
             "Minimum Area Filter:",
-            options=self.config.processing.available_filter_areas,
-            value=self.config.processing.default_filter_area,
+            options=FILTER_AREA_OPTIONS,
+            value=FILTER_AREA_OPTIONS[-1],
             key="filter_area",
             help="Minimum area (pixels) to filter out small storm objects",
-            on_change=(lambda: self.global_data_processor.clear_storms_cache())
+            on_change=(lambda: self._reset_scanning(clear_cache=True))
         )
 
     def _navigate_scan(self, go_to: bool) -> None:

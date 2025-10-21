@@ -2,16 +2,16 @@ from datetime import datetime
 import numpy as np
 
 from src.preprocessing import convert_contours_to_polygons
-from src.models.base import BasePrecipitationModeling
+from src.models.base import BasePrecipitationModel
 from src.cores.base import StormsMap
 from src.identification import SimpleContourIdentifier
 
-from ..base import BasePrecipitationModeling
+from ..base import BasePrecipitationModel
 from .storm import StormShapeVectors
 from .tracking import PhaseCorrelationTracking
 from .matcher import PolarVectorMatcher
 
-class SimplePrecipitationModel(BasePrecipitationModeling):
+class SimplePrecipitationModel(BasePrecipitationModel):
     """
     Simple precipitation modeling using contour-based storm identification.
 

@@ -17,14 +17,15 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from src.cores.base import StormsMap
 
-from app.config import AppConfig
 from app.cores.data_processor import DataProcessor
 from app.utils import draw_contours
+from app.components.contours_window import ContourWindow
 
 class HomePage:
     """Main page component for storm visualization"""
     def __init__(self, global_data_processor: DataProcessor):
         self.global_data_processor = global_data_processor
+        self.contour_window = ContourWindow()
     
     def render(self) -> None:
         """Render the home page"""
@@ -61,22 +62,8 @@ class HomePage:
                 st.text("Number of cache contours: " + str(len(self.global_data_processor._storms_cache)))
 
             # Display results
-            self._display_results(original_image, storms_map)
+            self.contour_window.render(original_image, storms_map)
             
         except Exception as e:
             st.error(f"❌ Error processing scan: {str(e)}")
             st.exception(e)
-
-    def _display_results(self, original_image: np.ndarray, storms_map: StormsMap) -> None:
-        """Display processing results"""
-
-        st.subheader("Radar Scan with Storm Identification")
-        
-        
-        blank_img = np.ones_like(original_image) * 255  # White background
-        contours_image = draw_contours(blank_img, storms_map.storms)
-
-        # Show two columns: original image and contours image
-        
-        st.image(original_image, caption="Original Radar Scan", width='stretch')
-        st.image(contours_image, caption="Identified Storm Contours", width='stretch')

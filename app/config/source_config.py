@@ -5,13 +5,14 @@ from src.identification import (
 )
 
 from src.models import (
-    BasePrecipitationModeling, SimplePrecipitationModel, ETitanPrecipitationModel
+    BasePrecipitationModel, SimplePrecipitationModel, ETitanPrecipitationModel, 
+    TitanPrecipitationModel, OursPrecipitationModel, AdaptiveTrackingPrecipitationModel
 )
 
-BASE_FOLDER = "data/images"
-IMAGES_FOLDER = os.listdir(os.path.join(BASE_FOLDER))
+THRESHOLD_OPTIONS = [20, 25, 30, 35, 40, 45, 50]
+FILTER_AREA_OPTIONS = [5, 10, 15, 20, 25, 30, 40, 50]
 
-MODELS = dict[str]
+BASE_FOLDER = "data/images"
 
 IDENTIFICATION_METHODS: dict[str, BaseStormIdentifier] = {
     "Simple Contour": SimpleContourIdentifier(),
@@ -20,7 +21,10 @@ IDENTIFICATION_METHODS: dict[str, BaseStormIdentifier] = {
     "Cluster": ClusterIdentifier(filter_center=10)
 }
 
-PRECIPITATION_MODELS: dict[str, BasePrecipitationModeling] = {
+PRECIPITATION_MODELS: dict[str, BasePrecipitationModel] = {
     "Simple Precipitation Model": SimplePrecipitationModel(SimpleContourIdentifier()),
-    "ETitan Precipitation Model": ETitanPrecipitationModel(MorphContourIdentifier(n_thresh=3, center_filter=10))
+    "ETitan Precipitation Model": ETitanPrecipitationModel(MorphContourIdentifier(n_thresh=3, center_filter=10)),
+    "Titan Precipitation Model": TitanPrecipitationModel(SimpleContourIdentifier()),
+    "Ours Precipitation Model": OursPrecipitationModel(SimpleContourIdentifier()),
+    "Adaptive Tracking Precipitation Model": AdaptiveTrackingPrecipitationModel(MorphContourIdentifier(n_thresh=3, center_filter=10))
 }

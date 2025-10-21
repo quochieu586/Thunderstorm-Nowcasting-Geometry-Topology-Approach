@@ -14,7 +14,7 @@ def draw_contours(blank_img: np.ndarray, storms: list[StormObject]) -> np.ndarra
 
         # Compute centroid history using the history movement vectors. Note that, the centroid of current storm is final point.
         history_centroids = [(storm.contour.centroid.x, storm.contour.centroid.y)]
-        for movement_vector in storm.history_movements:
+        for movement_vector in storm.history_movements[::-1]:
             prev_centroid = (history_centroids[0][0] - movement_vector[0], history_centroids[0][1] - movement_vector[1])
             history_centroids = [prev_centroid] + history_centroids
 

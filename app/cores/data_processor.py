@@ -21,9 +21,10 @@ from src.preprocessing import read_image, windy_preprocessing_pipeline, convert_
 from src.cores.base import StormsMap, StormObject
 from src.identification import BaseStormIdentifier
 
-from src.models import BasePrecipitationModeling, SimplePrecipitationModel
+from src.models import BasePrecipitationModel, SimplePrecipitationModel
 
-from app.config import AppConfig, IDENTIFICATION_METHODS, PRECIPITATION_MODELS
+from app.config.source_config import IDENTIFICATION_METHODS, PRECIPITATION_MODELS
+from app.config.app_config import BaseAppConfig
 
 class DataProcessor:
     """
@@ -37,7 +38,7 @@ class DataProcessor:
     Cache reset: When parameters (method, dbz threshold, filter area) change, the storms and models cache are cleared.
     """
 
-    def __init__(self, config: AppConfig):
+    def __init__(self, config: BaseAppConfig):
         self.config = config
         self.identifiers = IDENTIFICATION_METHODS
         self.precipitation_models = PRECIPITATION_MODELS
@@ -45,13 +46,13 @@ class DataProcessor:
         # Cache for processed data
         self._image_cache: dict[str, Tuple[np.ndarray, np.ndarray]] = {}
         self._storms_cache: dict[str, StormsMap] = {}
-        self._models_cache: dict[str, BasePrecipitationModeling] = {}
+        self._models_cache: dict[str, BasePrecipitationModel] = {}
     
     # =============================================================================
     # Public Processing Methods
     # =============================================================================
 
-    def _get_precipitation_models_object(self, dataset_name: str, method_name: str) -> BasePrecipitationModeling:
+    def _get_precipitation_models_object(self, dataset_name: str, method_name: str) -> BasePrecipitationModel:
         source_model = self.precipitation_models.get(method_name)
 
         if dataset_name not in self._models_cache:

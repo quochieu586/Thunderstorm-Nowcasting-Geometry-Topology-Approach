@@ -6,7 +6,7 @@ from copy import deepcopy
 from src.cores.base import StormsMap
 from src.preprocessing import convert_contours_to_polygons
 
-class BasePrecipitationModeling(ABC):
+class BasePrecipitationModel(ABC):
     """
     Simple precipitation modeling using contour-based storm identification.
 
@@ -23,9 +23,12 @@ class BasePrecipitationModeling(ABC):
         pass
 
     @abstractmethod
-    def processing_map(self, current_map: StormsMap):
+    def processing_map(self, current_map: StormsMap) -> int:
         """
-        Add new map into the tracking system and update the previous storms accordingly.
+        Process the current StormsMap and update the model's internal state: append new storms map and update movement history for all tracked storms.
+
+        Returns:
+            num_of_matched_storms (int): Number of storms that can be found history in previous maps.
         """
         pass
 

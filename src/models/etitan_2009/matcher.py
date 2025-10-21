@@ -109,6 +109,12 @@ class Matcher(BaseMatcher):
 
         assignments_2 = np.argwhere(assignment_mask & np.logical_not(invalid_mask))
 
+        if len(assignments_2) == 0:
+            return assignments
+        
+        if len(assignments) == 0:
+            return assignments_2
+
         # print(f"Number of matched: {len(assignments_2)}")
 
         return np.concatenate([assignments, assignments_2], axis=0)

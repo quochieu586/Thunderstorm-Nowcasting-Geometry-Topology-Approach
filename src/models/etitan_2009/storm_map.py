@@ -8,45 +8,6 @@ from src.preprocessing import convert_contours_to_polygons, convert_polygons_to_
 
 from .storm import CentroidStorm
 
-def etitan_identify_storms_map(dbz_map: np.ndarray, time_frame: datetime, map_id: str, identifier: MorphContourIdentifier) -> str:
-    """
-    Identify storms from given DBZ map using the specified identifier. Return the DbzStormsMap object.
-    """
-    contours = identifier.identify_storm(dbz_map)
-    polygons = convert_contours_to_polygons(contours)
-    polygons = sorted(polygons, key=lambda x: x.area, reverse=True)
-
-    # Keep list of storms
-    storms = []
-
-    for idx, polygon in enumerate(polygons):
-        contour = convert_polygons_to_contours([polygon])[0]
-
-        # Create the mask of current storm
-        mask = np.zeros_like(dbz_map, dtype=np.uint8)
-        cv2.fillPoly(mask, contour, color=1)
-
-        # Extract DBZ values inside mask
-        weights = dbz_map * mask
-
-        # Create coordinate grids
-        y_idx, x_idx = np.indices(dbz_map.shape)
-
-        # Compute weighted centroid
-        total_weight = weights.sum()
-        if total_weight == 0:
-            centroid = (np.nan, np.nan)  # or fallback
-        else:
-            cx = (x_idx * weights).sum() / total_weight
-            cy = (y_idx * weights).sum() / total_weight
-            centroid = (int(cx), int(cy))
-
-        storms.append(CentroidStorm(
-                polygon, centroid=centroid, id=f"{map_id}_storm_{idx}"
-            ))
-        
-    return DbzStormsMap(storms, time_frame=time_frame, dbz_map=dbz_map)
-
 class DbzStormsMap(StormsMap):
     storms: list[CentroidStorm]
     dbz_map: np.ndarray

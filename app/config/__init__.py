@@ -1,4 +1,0 @@
-from .source_config import BASE_FOLDER, IMAGES_FOLDER, IDENTIFICATION_METHODS, PRECIPITATION_MODELS
-from .app_config import WindyAppConfig as AppConfig
-
-__all__ = ["BASE_FOLDER", "IMAGES_FOLDER", "AppConfig", "IDENTIFICATION_METHODS", "PRECIPITATION_MODELS"]
