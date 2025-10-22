@@ -7,13 +7,17 @@ from src.preprocessing import convert_polygons_to_contours
 
 class ContourWindow:
 
-    def render(self, original_image: np.ndarray, storms_map: StormsMap) -> None:
+    def render(self, original_image: np.ndarray, storms_map: StormsMap, num_storms: int) -> None:
         """Display processing results"""
         st.subheader("Radar Scan with Storm Identification")
-        
+
         blank_img = np.ones_like(original_image) * 255  # White background
         contours_image = self._draw_contours_img(blank_img, storms_map.storms)
 
+        cv2.putText(contours_image, f"Number of storms matched from previous frame: {num_storms}", (10, 30), cv2.FONT_ITALIC, 0.5, (0, 0, 0), 1)
+        cv2.putText(contours_image, f"Number of new storms: {len(storms_map.storms) - num_storms} ", (10, 50), cv2.FONT_ITALIC, 0.5, (0, 0, 0), 1)
+
+        # Display dbz map using cmap 'viridis'
         st.image(original_image, caption="Original Radar Scan", width='stretch')
         st.image(contours_image, caption="Identified Storm Contours", width='stretch')
 

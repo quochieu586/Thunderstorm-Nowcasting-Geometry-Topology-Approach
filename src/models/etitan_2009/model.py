@@ -173,5 +173,6 @@ class ETitanPrecipitationModel(BasePrecipitationModel):
                 storm.contour_color = storm_controller["storm_lst"][-1].contour_color if len(storm_controller) >= 1 else storm.contour_color
                 storm.history_movements = [mv * dt for mv in storm_controller["movement"]]
             self.storms_maps.append(curr_storms_map)
-
-        return len(assignments)
+            
+        right_matches = list(set([curr for _, curr in assignments]))
+        return len(right_matches)

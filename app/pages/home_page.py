@@ -51,7 +51,7 @@ class HomePage:
                 st.warning("No folder selected or no images available")
                 return
     
-            original_image, dbz_map, storms_map = result
+            original_image, dbz_map, storms_map, num_storms = result
 
             col1, col2 = st.columns(2)
             with col1:
@@ -62,7 +62,7 @@ class HomePage:
                 st.text("Number of cache contours: " + str(len(self.global_data_processor._storms_cache)))
 
             # Display results
-            self.contour_window.render(original_image, storms_map)
+            self.contour_window.render(original_image, storms_map, num_storms)
             
         except Exception as e:
             st.error(f"❌ Error processing scan: {str(e)}")

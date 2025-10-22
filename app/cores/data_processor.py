@@ -45,7 +45,7 @@ class DataProcessor:
         
         # Cache for processed data
         self._image_cache: dict[str, Tuple[np.ndarray, np.ndarray]] = {}
-        self._storms_cache: dict[str, StormsMap] = {}
+        self._storms_cache: dict[str, tuple[StormsMap, int]] = {}               # Cache for identified storms and number of storms matched from previous scan
         self._models_cache: dict[str, BasePrecipitationModel] = {}
     
     # =============================================================================
@@ -81,7 +81,7 @@ class DataProcessor:
 
         # Find in cache first
         original_image, dbz_map = self._image_cache.get(cache_key, (None, None))
-        storms_map = self._storms_cache.get(cache_key, None)
+        storms_map, num_storms = self._storms_cache.get(cache_key, (None, 0))
 
         if original_image is None:
             original_image, dbz_map = self._load_image(selected_folder, scan_index)
@@ -98,15 +98,15 @@ class DataProcessor:
             # Processing the image: identify contours, track storms and update history of model
             time_frame = self.config.get_time_frame(selected_folder, scan_index)
             storms_map = instance_model.identify_storms(dbz_map, threshold=threshold, filter_area=filter_area, map_id=f"storm_{scan_index}", time_frame=time_frame)
-            instance_model.processing_map(storms_map)            # Update tracking history
+            num_storms = instance_model.processing_map(storms_map)            # Update tracking history
 
             # Cache the identified storms
-            self._storms_cache[cache_key] = storms_map
+            self._storms_cache[cache_key] = (storms_map, num_storms)
 
         else:
             print(f"Cache hit for storms at key: {cache_key}, using cached data.")
             
-        return original_image, dbz_map, storms_map
+        return original_image, dbz_map, storms_map, num_storms
     
     def clear_storms_cache(self) -> None:
         """

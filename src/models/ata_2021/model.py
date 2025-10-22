@@ -175,4 +175,6 @@ class AdaptiveTrackingPrecipitationModel(BasePrecipitationModel):
             self.storms_maps.append(curr_storms_map)
 
         self.storms_maps.append(curr_storms_map)
-        return len(assignments)
+        
+        right_matches = list(set([curr for _, curr in assignments]))
+        return len(right_matches)

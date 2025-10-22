@@ -62,7 +62,6 @@ class TitanPrecipitationModel(BasePrecipitationModel):
 
 
     def processing_map(self, curr_storms_map: StormsMap) -> int:
-
         if self.storms_maps == []:
             self.storms_maps.append(curr_storms_map)
             self.tracker = TrackingHistory(curr_storms_map)
@@ -146,4 +145,5 @@ class TitanPrecipitationModel(BasePrecipitationModel):
                 storm.history_movements = [mv * dt for mv in storm_controller["movement"]]
             self.storms_maps.append(curr_storms_map)
 
-        return len(assignments)
+        right_matches = list(set([curr for _, curr in assignments]))
+        return len(right_matches)
