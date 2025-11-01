@@ -6,7 +6,7 @@ from sklearn.cluster import KMeans
 from copy import deepcopy
 
 from src.cores.base import StormObject
-from src.cores.polar_description_vector import ShapeVector, construct_shape_vector
+from src.cores.polar_description_vector import ShapeVector, construct_shape_vector_fast
 from src.preprocessing import convert_polygons_to_contours
 
 THRESHOLD = 35
@@ -36,9 +36,9 @@ class ShapeVectorStorm(StormObject):
         coords = self._sample_particles(contour, density)
 
         # create the shape vectors
-        vectors = [construct_shape_vector(
-            polygons=global_contours, point=coord, radii=radii, num_sectors=num_sectors
-        ) for coord in coords]
+        vectors = construct_shape_vector_fast(
+            global_contours=global_contours, particles=coords, num_sectors=num_sectors, radii=radii
+        )
         self.shape_vectors = [ShapeVector(
             coord=(coord[0], coord[1]), vector=vector
         ) for coord, vector in zip(coords.reshape(-1, 2), vectors)]
@@ -83,7 +83,7 @@ class ShapeVectorStorm(StormObject):
 
         # cluster them 
         n_clusters = int(cv2.contourArea(contour) * density) + 1
-        k_means = KMeans(n_clusters)
+        k_means = KMeans(n_clusters, random_state=2025)
         k_means.fit(points)
 
         return k_means.cluster_centers_.astype(np.int64)[:, ::-1]   # revert the coord order.

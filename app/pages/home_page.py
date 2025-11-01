@@ -32,6 +32,29 @@ class HomePage:
         # Process and display current scan
         self._process_and_display_current_scan()
 
+    def _run_multiple_scans(self) -> None:
+        """Run multiple scans ahead based on user input"""
+        selected_folder = st.session_state.get('selected_folder')
+        precipitation_model = st.session_state.get('precipitation_model', 'Simple Contour')
+        threshold = st.session_state.get('dbz_threshold', 35)
+        filter_area = st.session_state.get('filter_area', 20)
+        run_multiple_scans = st.session_state.get('run_multiple_scans', 1)
+        current_scan_index = st.session_state.get('current_scan_index', 0)
+
+        print(f"Running multiple scans... . Processing scans with parameters: precipitation_model={precipitation_model}, threshold={threshold}, filter_area={filter_area}, selected_folder={selected_folder}, starting_scan_index={current_scan_index}, number_of_scans={run_multiple_scans}")
+
+        try:
+            with st.spinner("🔄 Processing multiple radar data scans and identifying storms..."):
+                for i in range(run_multiple_scans):
+                    scan_index = current_scan_index + i
+                    result = self.global_data_processor.identify_storms(selected_folder=selected_folder, scan_index=scan_index, precipitation_model=precipitation_model, threshold=threshold, filter_area=filter_area)
+                    if result is None:
+                        break
+
+        except Exception as e:
+            st.error(f"❌ Error processing multiple scans: {str(e)}")
+            st.exception(e)
+
     def _process_and_display_current_scan(self) -> None:
         """Process and display the current scan with storm identification"""
         selected_folder = st.session_state.get('selected_folder')
@@ -53,13 +76,16 @@ class HomePage:
     
             original_image, dbz_map, storms_map, num_storms = result
 
-            col1, col2 = st.columns(2)
+            col1, col2, col3 = st.columns(3)
             with col1:
                 st.text("Number of storms identified: " + str(len(storms_map.storms)))
                 st.text("File name: " + self.global_data_processor.config.get_filename(selected_folder, scan_index))
             with col2:
                 st.text("Number of cache images: " + str(len(self.global_data_processor._image_cache)))
                 st.text("Number of cache contours: " + str(len(self.global_data_processor._storms_cache)))
+            with col3:          # Run multiple storms at time and save in cache
+                st.number_input("Cache multiple scan index:", min_value=1, max_value=len(self.global_data_processor.config.get_images_in_folder(selected_folder))-scan_index, value=1, step=1, key="run_multiple_scans")
+                st.button("Run", key="run_multiple_scans_button", on_click=self._run_multiple_scans)
 
             # Display results
             self.contour_window.render(original_image, storms_map, num_storms)

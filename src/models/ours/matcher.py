@@ -8,7 +8,7 @@ from .storm import ShapeVectorStorm
 from src.cores.base import StormsMap
 from src.tracking import BaseMatcher
 
-MAX_VELOCITY = 500
+MAX_VELOCITY = 100
 MATCHING_THRESHOLD = 0.45
 
 class StormMatcher(BaseMatcher):

@@ -2,7 +2,7 @@ import numpy as np
 from datetime import datetime
 
 from src.cores.base import StormsMap
-from src.identification import BaseStormIdentifier
+from src.identification import BaseStormIdentifier, HypothesisIdentifier
 from src.preprocessing import convert_contours_to_polygons
 
 from ..base import BasePrecipitationModel
@@ -17,12 +17,12 @@ class OursPrecipitationModel(BasePrecipitationModel):
     Attributes:
         identifier (SimpleContourIdentifier): The storm identifier used for identifying storms in radar images.
     """
-    identifier: BaseStormIdentifier
+    identifier: HypothesisIdentifier
     matcher: StormMatcher
     tracker: TrackingHistory
     storms_maps: list[StormsMap]
 
-    def __init__(self, identifier: BaseStormIdentifier):
+    def __init__(self, identifier: HypothesisIdentifier):
         self.identifier = identifier
         self.storms_maps = []
         self.matcher = StormMatcher()

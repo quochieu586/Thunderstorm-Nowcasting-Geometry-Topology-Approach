@@ -25,6 +25,6 @@ PRECIPITATION_MODELS: dict[str, BasePrecipitationModel] = {
     "Simple Precipitation Model": SimplePrecipitationModel(SimpleContourIdentifier()),
     "ETitan Precipitation Model": ETitanPrecipitationModel(MorphContourIdentifier(n_thresh=3, center_filter=10)),
     "Titan Precipitation Model": TitanPrecipitationModel(SimpleContourIdentifier()),
-    "Ours Precipitation Model": OursPrecipitationModel(SimpleContourIdentifier()),
+    "Ours Precipitation Model": OursPrecipitationModel(HypothesisIdentifier(distance_dbz_threshold=5, filter_center=10)),
     "Adaptive Tracking Precipitation Model": AdaptiveTrackingPrecipitationModel(MorphContourIdentifier(n_thresh=3, center_filter=10))
 }
