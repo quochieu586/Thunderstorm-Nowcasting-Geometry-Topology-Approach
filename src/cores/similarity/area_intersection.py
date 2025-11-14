@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from src.cores.contours import StormObject
+from src.cores.base import StormObject
 from typing import Union
 from shapely import Polygon
 

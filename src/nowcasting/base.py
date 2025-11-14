@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from src.cores.contours import StormObject
+from src.cores.base import StormObject
 
 class BaseStormMotion(ABC):
     """
