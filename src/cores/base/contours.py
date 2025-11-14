@@ -14,7 +14,8 @@ class StormObject(BaseObject):
     contour: Polygon    # List of points represent contours
     history_movements: list[tuple[float, float]]
     contour_color: tuple[int, int, int]
-    id: str = ""        # Unique ID of this object for tracking over time
+    id: str    # Unique ID of this object for tracking over time
+    original_id: str
 
     def __init__(self, contour: Union[Polygon, np.ndarray], id: str = ""):
         if type(contour) is np.ndarray:
@@ -22,6 +23,7 @@ class StormObject(BaseObject):
 
         self.contour = contour
         self.id = id
+        self.original_id = id
         self.history_movements = []
         self.contour_color = tuple(np.random.randint(0, 255, size=3).tolist())
 

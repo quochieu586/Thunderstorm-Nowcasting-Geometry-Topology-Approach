@@ -1,5 +1,5 @@
 import numpy as np
-from datetime import datetime
+from datetime import datetime, timedelta
 import cv2
 from shapely.geometry import Point, Polygon
 
@@ -147,3 +147,24 @@ class TitanPrecipitationModel(BasePrecipitationModel):
 
         right_matches = list(set([curr for _, curr in assignments]))
         return len(right_matches)
+    
+    def prediction(self, lead_time: int) -> StormsMap:
+        """
+        Predict the future storms map after lead_time (in seconds) from the latest processed map.
+
+        Args:
+            lead_time (int): The lead time in seconds.
+        Returns:
+            StormsMap: The predicted storms map.
+        """
+        if self.tracker is None:
+            raise ValueError("No storms map has been processed yet.")
+        
+        dt = lead_time / 3600  # scale to hours
+        latest_time = self.storms_maps[-1].time_frame
+        predicted_storms = [
+                self.tracker.forecast(storm.id, dt)
+                for storm in self.storms_maps[-1].storms
+            ]
+        
+        return StormsMap(storms=predicted_storms, time_frame=latest_time + timedelta(seconds=lead_time))

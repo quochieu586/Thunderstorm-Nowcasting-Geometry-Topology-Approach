@@ -39,7 +39,7 @@ class StormMatcher(BaseMatcher):
         best_score = compute_overlapping(best_displacement)
 
         for num_cluster in range(2, 6):
-            if len(displacements) <= num_cluster * 2:
+            if len(set([(float(dx), float(dy)) for dx, dy in displacements])) <= num_cluster * 2:
                 break
             else:
                 # Build a cluster and extract the group with largest count.
@@ -118,6 +118,7 @@ class StormMatcher(BaseMatcher):
 
         p = np.max([p_A, p_B], axis=0)
         assignments = np.argwhere(p > self.matching_threshold)
+        
         return assignments, [np.array(p_B)[prev_idx][curr_idx] for prev_idx, curr_idx in assignments], \
             [self._resolve_displacement(np.array(mapping_displacements[curr_idx][prev_idx]), \
                     storms_map1.storms[prev_idx], storms_map2.storms[curr_idx]) for prev_idx, curr_idx in assignments]
