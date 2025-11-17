@@ -20,39 +20,6 @@ def read_grib(path: Path):
     arr = data.squeeze().values
     return arr
 
-def read_nexrad_radar(path: Path):
-    """
-    Data files: KLIX20210829_050151_V06.ar2v
-    Segment | Meaning
-    KLIX    | Radar station ID
-    20210829| Date (YYYYMMDD) August 29, 2021
-    050151  | Time (HHMMSS) 05:01:51 UTC
-    V06     | Volume number (scan sequence) Volume 6 of that radar cycle
-    """
-
-    radar = pyart.io.read_nexrad_archive(path)
-    print("Fields:", radar.fields.keys())
-    print("Elevation angles:", radar.fixed_angle['data'])
-    print("Scan start:", radar.time['units'])
-    print("Latitude:", radar.latitude['data'][0])
-
-    grid = pyart.map.grid_from_radars(
-        radar,
-        grid_shape=(1, 400, 400),  # Higher grid size = more coverage
-        grid_limits=((0, 1000), (-400000, 400000), (-400000, 400000)),  # ±400 km
-        fields=['reflectivity'],
-        weighting_function='nearest',
-        gridding_algo='map_gates_to_grid'
-    )
-
-    ref = grid.fields['reflectivity']['data'].filled(np.nan)[0]  # 2D NumPy array
-
-    from pyart.util import datetimes_from_radar
-    time_datetimes = datetimes_from_radar(radar)  # list of datetime objects
-    scan_start_time = time_datetimes[0]           # first time (start of scan)
-    # scan_end_time = time_datetimes[-1]            # last time (end of scan)
-    return ref, scan_start_time
-
 def read_nexrad_grid(path: Path):
     grid = pyart.io.read_grid(path)
     data = grid.fields['reflectivity']['data']
@@ -63,6 +30,9 @@ def read_nexrad_grid(path: Path):
     composite_refl_2d = np.ma.masked_where(composite_refl_2d == fill_value, composite_refl_2d)
     return composite_refl_2d, grid.time
 
+def read_numpy_grid(path: Path):
+    arr = np.load(path)
+    return arr
 
 def draw_orthogonal_hull(orthogonal_hull: Union[list, Any], image: np.ndarray, color: Tuple[int, int, int] = (0,0,255)):
 
