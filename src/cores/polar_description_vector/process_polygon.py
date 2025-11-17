@@ -5,6 +5,7 @@ from shapely.ops import unary_union
 import cv2
 import math
 from dataclasses import dataclass
+from shapely.affinity import rotate, translate
 
 from src.preprocessing import convert_contours_to_polygons, convert_polygons_to_contours
 
@@ -57,6 +58,47 @@ def construct_shape_vector(polygons: List[Union[np.ndarray, Polygon]], point: Tu
             features_vector[i] -= features_vector[num_sectors * j + rem]
     
     return np.array(features_vector)
+
+
+def construct_shape_vector_fast(global_contours: list[np.ndarray], particles: np.ndarray, num_sectors: int, radii: list[float]) -> np.ndarray:
+    """
+    Construct the shape vector for a list of particles.
+
+    Args:
+        global_contours (list[np.ndarray]): the list of contours representing the global storm area.
+        particles (np.ndarray): the list of particles, shape (num_particles, 2).
+    
+    Returns:
+        shape_vectors (np.ndarray): the shape vectors, shape (num_particles, num_radii * num_sectors).
+    """
+    def _precompute_sector_templates(r: float, num_points: int = 15):
+        base_sector = construct_sector((0,0), r, 0, 360/num_sectors, num_points=num_points)
+        points_sector_templates = []
+        for j in range(num_sectors):
+            sector = rotate(base_sector, j*360/num_sectors, origin=(0,0))
+            points_sector_templates.append(np.array(sector.exterior.coords))
+        return points_sector_templates
+
+    shape_vectors = np.zeros(shape=(len(radii), len(particles), num_sectors))
+    global_poly = unary_union(convert_contours_to_polygons(global_contours))
+
+    for r_idx, r in enumerate(radii):
+        points_sector_templates = _precompute_sector_templates(r=r, num_points=15)
+        sector_polys = [Polygon(s) for s in points_sector_templates]
+
+        for i, (x, y) in enumerate(particles):
+            for j, sp in enumerate(sector_polys):
+                shifted = translate(sp, xoff=x, yoff=y)
+                shape_vectors[r_idx, i, j] = shifted.intersection(global_poly).area
+
+    actual_shape_vectors = np.zeros_like(shape_vectors)
+    actual_shape_vectors[0] = shape_vectors[0]
+    for r_idx in range(1, len(radii)):
+        actual_shape_vectors[r_idx] = shape_vectors[r_idx] - shape_vectors[r_idx - 1]
+
+    # reshape into (num_particles, num_radii * num_sectors)
+    return np.concatenate(actual_shape_vectors, axis=-1)
+
 
 def construct_sector(center: np.ndarray, radius: float, angle_start: float, angle_end: float, num_points: int = 30) -> np.ndarray:
     """

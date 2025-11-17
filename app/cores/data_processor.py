@@ -18,28 +18,49 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from src.preprocessing import read_image, windy_preprocessing_pipeline, convert_contours_to_polygons
 
-from src.cores.contours import StormsMap
+from src.cores.base import StormsMap, StormObject
 from src.identification import BaseStormIdentifier
 
-from app.config import AppConfig, IDENTIFICATION_METHODS
-from app.utils import StormWithMovements
+from src.models import BasePrecipitationModel, SimplePrecipitationModel
+
+from app.config.source_config import IDENTIFICATION_METHODS, PRECIPITATION_MODELS
+from app.config.app_config import BaseAppConfig
 
 class DataProcessor:
-    """Handles data loading, storm identification processing, and state management"""
+    """
+    Handles data loading, storm identification processing, and state management with cache mechanism for efficiency.
+
+    Args:
+        _image_cache: Cache for loaded images to avoid redundant I/O operations
+        _storms_cache: Cache for identified storms to avoid redundant processing
+        _models_cache: Cache for precipitation model instances per dataset. Where single model instance is used for single dataset.
     
-    def __init__(self, config: AppConfig):
+    Cache reset: When parameters (method, dbz threshold, filter area) change, the storms and models cache are cleared.
+    """
+
+    def __init__(self, config: BaseAppConfig):
         self.config = config
         self.identifiers = IDENTIFICATION_METHODS
+        self.precipitation_models = PRECIPITATION_MODELS
         
         # Cache for processed data
         self._image_cache: dict[str, Tuple[np.ndarray, np.ndarray]] = {}
-        self._storms_cache: dict[str, StormsMap] = {}
+        self._storms_cache: dict[str, tuple[StormsMap, int]] = {}               # Cache for identified storms and number of storms matched from previous scan
+        self._models_cache: dict[str, BasePrecipitationModel] = {}
     
     # =============================================================================
     # Public Processing Methods
     # =============================================================================
 
-    def identify_storms(self, selected_folder: str, scan_index: int, identification_method: str, threshold: int, filter_area: int) -> tuple[np.ndarray, np.ndarray, StormsMap]:
+    def _get_precipitation_models_object(self, dataset_name: str, method_name: str) -> BasePrecipitationModel:
+        source_model = self.precipitation_models.get(method_name)
+
+        if dataset_name not in self._models_cache:
+            self._models_cache[dataset_name] = source_model.copy()
+
+        return self._models_cache[dataset_name]
+
+    def identify_storms(self, selected_folder: str, scan_index: int, precipitation_model: str, threshold: int, filter_area: int) -> tuple[np.ndarray, np.ndarray, StormsMap]:
         """
         Identify storms in a DBZ map (private method)
         
@@ -47,7 +68,7 @@ class DataProcessor:
             dbz_map: DBZ reflectivity map
             folder_name: Name of the folder containing images
             scan_index: Index of the scan
-            identification_method: Name of identification method to use
+            precipitation_model: Name of precipitation model applying. This can be either: Simple Model, ETitan, AINT,... .
             threshold: DBZ threshold for storm identification
             filter_area: Minimum area filter for storms
             
@@ -60,7 +81,7 @@ class DataProcessor:
 
         # Find in cache first
         original_image, dbz_map = self._image_cache.get(cache_key, (None, None))
-        storms_map = self._storms_cache.get(cache_key, None)
+        storms_map, num_storms = self._storms_cache.get(cache_key, (None, 0))
 
         if original_image is None:
             original_image, dbz_map = self._load_image(selected_folder, scan_index)
@@ -68,52 +89,40 @@ class DataProcessor:
         if storms_map is None:
             print(f"Cache missed for storms at key: {cache_key}, processing identification...")
 
-            # Get the appropriate identifier
-            identifier = self.identifiers.get(identification_method)
-            if identifier is None or not isinstance(identifier, BaseStormIdentifier):
-                raise ValueError(f"Unknown identification method: {identification_method}")
+            # Get the model object
+            try:
+                instance_model = self._get_precipitation_models_object(selected_folder, precipitation_model)
+            except KeyError:
+                raise ValueError(f"Precipitation model '{precipitation_model}' not found in available models.")
 
-            # Identify contours
-            contours = identifier.identify_storm(
-                dbz_map, 
-                threshold=threshold,
-                filter_area=filter_area
-            )
-            
-            # Convert contours to polygons
-            polygons = convert_contours_to_polygons(contours)
-            polygons = [pol for pol in polygons if pol.area >= filter_area]
-            polygons = sorted(polygons, key=lambda x: x.area, reverse=True)
-            
-            # Create storm objects
-            storms = [
-                StormWithMovements(polygon, id=f"scan_{scan_index}_storm_{idx}") 
-                for idx, polygon in enumerate(polygons)
-            ]
-            
-            # Create storms map
-            storms_map = StormsMap(storms, time_frame=datetime.now())
-            
-            # Cache the result
-            self._storms_cache[cache_key] = storms_map
+            # Processing the image: identify contours, track storms and update history of model
+            time_frame = self.config.get_time_frame(selected_folder, scan_index)
+            storms_map = instance_model.identify_storms(dbz_map, threshold=threshold, filter_area=filter_area, map_id=f"storm_{scan_index}", time_frame=time_frame)
+            num_storms = instance_model.processing_map(storms_map)            # Update tracking history
+
+            # Cache the identified storms
+            self._storms_cache[cache_key] = (storms_map, num_storms)
+
         else:
             print(f"Cache hit for storms at key: {cache_key}, using cached data.")
             
-        return original_image, dbz_map, storms_map
+        return original_image, dbz_map, storms_map, num_storms
     
     def clear_storms_cache(self) -> None:
         """
         Clear the storms cache when identification parameters, dbz threshold or filter area change
         """
-        print("Clearing storms cache... . Before clearing, cache size:", len(self._storms_cache))
+        print("Clearing storms and models cache...")
         self._storms_cache.clear()
-        print("Detect changed in identification parameters, clearing storms cache ! After clearing, cache size:", len(self._storms_cache))
+        self._models_cache.clear()
+
 
     def get_cache_info(self) -> Dict[str, int]:
         """Get information about cached data"""
         return {
             "images_cached": len(self._image_cache),
-            "storms_cached": len(self._storms_cache)
+            "storms_cached": len(self._storms_cache),
+            "models_cached": len(self._models_cache),           # Single model for each dataset
         }
     
     # =============================================================================

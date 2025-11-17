@@ -3,7 +3,7 @@ import cv2
 from shapely.affinity import translate
 
 from .base import BaseStormMotion
-from src.cores.contours import StormObject
+from src.cores.base import StormObject
 
 class ConstantVectorMotion(BaseStormMotion):
     """

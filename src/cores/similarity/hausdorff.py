@@ -1,4 +1,4 @@
-from src.cores.contours import StormObject
+from src.cores.base import StormObject
 from shapely import hausdorff_distance
 
 def compute_hausdorff_distance(storm1: StormObject, storm2: StormObject) -> float:

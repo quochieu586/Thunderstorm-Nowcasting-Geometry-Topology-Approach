@@ -3,7 +3,7 @@ import numpy as np
 
 class BaseStormIdentifier(ABC):
     @abstractmethod
-    def identify_storm(self, image: np.ndarray, **args) -> list[np.ndarray]:
+    def identify_storm(self, image: np.ndarray, threshold: float, filter_area: float) -> list[np.ndarray]:
         """
             Identify storm objects from the image.
 

@@ -3,13 +3,11 @@ import cv2
 import numpy as np
 
 class MorphContourIdentifier(BaseStormIdentifier):
-    def __init__(self):
-        super().__init__()
-    
-    def identify_storm(
-        self, dbz_map: np.ndarray, threshold: int, n_thresh: int,
-        filter_area: int = 30, center_filter: int = 10
-    ) -> list[np.ndarray]:
+    def __init__(self, n_thresh: int = 3, center_filter: int = 10):
+        self.n_thresh = n_thresh
+        self.center_filter = center_filter
+
+    def identify_storm(self, dbz_map: np.ndarray, threshold: int = 30, filter_area: int = 30) -> list[np.ndarray]:
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3,3))
 
         # erode for removing weak connection
@@ -22,13 +20,13 @@ class MorphContourIdentifier(BaseStormIdentifier):
             if np.sum(mask) > filter_area:
                 masks.append(mask)
 
-        for i in range(2, n_thresh+1):
+        for i in range(2, self.n_thresh+1):
             current_masks = []
             for roi_mask in masks:
-                if np.sum(roi_mask) < filter_area:
+                if np.sum(roi_mask) < self.center_filter:
                     current_masks.append(roi_mask)
                     continue
-                current_masks.extend(self._extract_substorms(dbz_map, roi_mask, kernel, threshold=threshold + 5*(i-1), area_filter=center_filter))
+                current_masks.extend(self._extract_substorms(dbz_map, roi_mask, kernel, threshold=threshold + 5*(i-1), area_filter=filter_area))
 
             masks = current_masks
 

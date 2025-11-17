@@ -7,27 +7,29 @@ DISTANCE = 1.1
 MIN_SAMPLES = 3
 
 class ClusterIdentifier(BaseStormIdentifier):
-    def identify_storm(self, dbz_map: np.ndarray, thresholds: list[float], filter_area: float, filter_center: float) -> list[np.ndarray]:
+    def __init__(self, filter_center: float):
+        self.filter_center = filter_center
+
+    def identify_storm(self, dbz_map: np.ndarray, threshold: float) -> list[np.ndarray]:
         """
         Implementation of storm identification using clustering algorithm (DBSCAN) in paper *An Improved Storm Cell Identification and Tracking (SCIT) Algorithm based on DBSCAN Clustering and JPDA Tracking Methods*.
 
         Args:
             dbz_map (np.ndarray): a 2D array of reflectivity values.
-            thresholds (list[float]): List of thresholds.
-            filter_area (float): minimum area of storm to be considered.
-            filter_center (float): minimum area of substorm center to be considered.
         
         Returns:
             contours (list[np.ndarray]): List of contours.
         """
-        substorms_list = [self._extract_substorms(dbz_map, threshold, filter_area) for threshold in thresholds]
-        storms = [storm for storm in substorms_list[0] if np.sum(storm) >= filter_area]
+        thresholds = [t for t in range(threshold, threshold+25, 5)]
+
+        substorms_list = [self._extract_substorms(dbz_map, threshold, self.filter_area) for threshold in thresholds]
+        storms = [storm for storm in substorms_list[0] if np.sum(storm) >= self.filter_area]
 
         for substorms in substorms_list[1:]:
             if len(substorms) == 0:
                 break
-            storms = self._process_storms(storms, substorms, filter_center=filter_center)
-        
+            storms = self._process_storms(storms, substorms, filter_center=self.filter_center)
+
         # return storms
         contours = []
         for storm in storms:
