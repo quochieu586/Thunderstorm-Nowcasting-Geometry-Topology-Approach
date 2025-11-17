@@ -18,7 +18,8 @@ class SimpleContourIdentifier(BaseStormIdentifier):
             Returns:
                 List[np.ndarray]: A list of detected contours, each represented as an array of points.
         """
-
+        if isinstance(dbz_map, np.ma.MaskedArray):
+            dbz_map = dbz_map.filled(0)
         # Get the region
         region = (dbz_map >= threshold).astype(np.uint8)
 

@@ -96,3 +96,23 @@ def mrms_preprocessing_pipeline(grid: np.ndarray) -> np.ndarray:
         So far this doens't do anything other than just providing abstraction.
     """
     return grid
+
+def nexrad_radar_preprocessing_pipeline(ref: np.ndarray) -> np.ndarray:
+    """
+        Preprocess the NEXRAD dBZ grids.
+        So far this doens't do anything other than just providing abstraction.
+    """
+    return ref
+
+def nexrad_grid_preprocessing_pipeline(ref: np.ndarray) -> np.ndarray:
+    """
+        Preprocess the NEXRAD dBZ grids.
+        So far this doens't do anything other than just providing abstraction.
+    """
+    return ref
+def nexrad_numpy_preprocessing_pipeline(ref: np.ndarray) -> np.ndarray:
+    """
+        Preprocess the NEXRAD dBZ grids in numpy format.
+        So far this doens't do anything other than just providing abstraction.
+    """
+    return ref
