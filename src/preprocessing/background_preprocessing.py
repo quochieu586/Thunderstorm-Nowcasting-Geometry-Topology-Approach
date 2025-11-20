@@ -115,4 +115,5 @@ def nexrad_numpy_preprocessing_pipeline(ref: np.ndarray) -> np.ndarray:
         Preprocess the NEXRAD dBZ grids in numpy format.
         So far this doens't do anything other than just providing abstraction.
     """
+    np.nan_to_num(ref, copy=False, nan=0)
     return ref
