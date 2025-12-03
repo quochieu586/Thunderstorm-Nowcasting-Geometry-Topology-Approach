@@ -5,7 +5,7 @@ from .titan_1993 import TitanPrecipitationModel
 from .ours import OursPrecipitationModel
 from .ours_new import NewPrecipitationModel
 
-from .base import BasePrecipitationModel
+from .base.base import BasePrecipitationModel
 
 __all__ = ["SimplePrecipitationModel", "BasePrecipitationModel", "ETitanPrecipitationModel", 
            "TitanPrecipitationModel", "OursPrecipitationModel", "AdaptiveTrackingPrecipitationModel", "NewPrecipitationModel"]

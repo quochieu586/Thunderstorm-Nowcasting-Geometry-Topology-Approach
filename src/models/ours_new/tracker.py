@@ -15,7 +15,7 @@ class StormRecord:
     Record: is a part of `StormTrack`, contains information about a storm at a specific time frame.
     """
     track_id: int
-    storm: ShapeVectorStorm
+    storms: dict[int, ShapeVectorStorm]
     time_frame: datetime
     is_virtual: bool = field(default=False)      # if virtual: the current storm of the corresponding track is splitted and this storm is created to keep track of the splitted part.
     parent_track_id: int = field(default=None)   # if virtual: the id of the parent track from which this storm is splitted.

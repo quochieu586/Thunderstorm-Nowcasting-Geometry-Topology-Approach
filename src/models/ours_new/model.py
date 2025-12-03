@@ -5,7 +5,7 @@ from src.cores.base import StormsMap
 from src.identification import BaseStormIdentifier, HypothesisIdentifier
 from src.preprocessing import convert_contours_to_polygons
 
-from ..base import BasePrecipitationModel
+from ..base.base import BasePrecipitationModel
 from .storm import ShapeVectorStorm
 from .matcher import StormMatcher, MAX_VELOCITY, MATCHING_THRESHOLD
 from .tracker import TrackingHistory
@@ -110,7 +110,7 @@ class NewPrecipitationModel(BasePrecipitationModel):
         right_matches = list(set([m.curr_storm_order for m in matched]))
         return len(right_matches)
     
-    def prediction(self, lead_time: float) -> StormsMap:
+    def forecast(self, lead_time: float) -> StormsMap:
         """
         Predict future storms up to lead_time based on the current storm map.
 

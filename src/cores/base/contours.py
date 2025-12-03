@@ -12,10 +12,10 @@ THRESHOLD_DBZ = 30
 @dataclass
 class StormObject(BaseObject):
     contour: Polygon    # List of points represent contours
-    history_movements: list[tuple[float, float]]
     contour_color: tuple[int, int, int]
     id: str    # Unique ID of this object for tracking over time
     original_id: str
+    history_movements: list[tuple[float, float]]
 
     def __init__(self, contour: Union[Polygon, np.ndarray], id: str = ""):
         if type(contour) is np.ndarray:

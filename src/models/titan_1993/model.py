@@ -7,7 +7,7 @@ from src.cores.base import StormsMap
 from src.identification import SimpleContourIdentifier
 from src.preprocessing import convert_contours_to_polygons, convert_polygons_to_contours
 
-from ..base import BasePrecipitationModel
+from ..base.base import BasePrecipitationModel
 from .storm import CentroidStorm
 from .tracker import TrackingHistory
 from .matcher import SimpleMatcher

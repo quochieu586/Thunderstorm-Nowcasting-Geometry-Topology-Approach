@@ -5,7 +5,7 @@ from src.cores.base import StormsMap
 from src.identification import BaseStormIdentifier, HypothesisIdentifier
 from src.preprocessing import convert_contours_to_polygons
 
-from ..base import BasePrecipitationModel
+from ..base.base import BasePrecipitationModel
 from .storm import ShapeVectorStorm
 from .matcher import StormMatcher, MAX_VELOCITY, MATCHING_THRESHOLD
 from .tracker import TrackingHistory
