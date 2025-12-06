@@ -14,7 +14,7 @@ class BasePrecipitationModel(ABC):
         identifier (SimpleContourIdentifier): The storm identifier used for identifying storms in radar images.
     """
     storms_maps: list[StormsMap]
-    tracking_history: TrackingHistory = TrackingHistory()
+    tracking_history: TrackingHistory
 
     @abstractmethod
     def identify_storms(self, dbz_img: np.ndarray, time_frame: datetime, map_id: str, threshold: float, filter_area: float) -> StormsMap:
