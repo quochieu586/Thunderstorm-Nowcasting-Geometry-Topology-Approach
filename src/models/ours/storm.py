@@ -75,7 +75,7 @@ def construct_shape_vector_dbz(
     else:
         pbar = enumerate(particles)
 
-    for p_idx, (xoff, yoff) in pbar:
+    for p_idx, (yoff, xoff) in pbar:    # since particles are in (y, x) order
         sector_mask = shift_mask(sector_mask_template, xoff, yoff, origin)
         sector_values = scaled_map * sector_mask
 

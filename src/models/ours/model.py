@@ -1,5 +1,6 @@
 import numpy as np
 from datetime import datetime, timedelta
+from tqdm.notebook import tqdm
 
 from src.cores.base import StormsMap
 from src.identification import BaseStormIdentifier, HypothesisIdentifier
@@ -29,17 +30,21 @@ class OursPrecipitationModel(BasePrecipitationModel):
         self.matcher = StormMatcher(max_velocity=max_velocity, weights=weights)
         self.tracker = None
 
-    def identify_storms(self, dbz_img: np.ndarray, time_frame: datetime, map_id: str, threshold: int, filter_area: float) -> StormsMap:
+    def identify_storms(self, dbz_img: np.ndarray, time_frame: datetime, map_id: str, 
+                        threshold: int, filter_area: float, show_progress: bool = True) -> StormsMap:
         contours = self.identifier.identify_storm(dbz_img, threshold=threshold, filter_area=filter_area)
         polygons = convert_contours_to_polygons(contours)
         polygons = sorted(polygons, key=lambda x: x.area, reverse=True)
+
+        pbar = tqdm(enumerate(polygons), total=len(polygons), desc="Constructing ShapeVectorStorms", leave=False) \
+            if show_progress else enumerate(polygons)
 
         # Construct storms map
         storms = [ShapeVectorStorm(
                     polygon=polygon, 
                     id=f"{map_id}_storm_{idx}",
                     dbz_map=dbz_img
-                ) for idx, polygon in enumerate(polygons)]
+                ) for idx, polygon in pbar]
         
         return DbzStormsMap(storms, time_frame=time_frame, dbz_map=dbz_img)
 
