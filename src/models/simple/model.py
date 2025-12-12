@@ -2,11 +2,11 @@ from datetime import datetime
 import numpy as np
 
 from src.preprocessing import convert_contours_to_polygons
-from src.models.base import BasePrecipitationModel
+from models.base.base import BasePrecipitationModel
 from src.cores.base import StormsMap
 from src.identification import SimpleContourIdentifier
 
-from ..base import BasePrecipitationModel
+from ..base.base import BasePrecipitationModel
 from .storm import StormShapeVectors
 from .tracker import PhaseCorrelationTracking
 from .matcher import PolarVectorMatcher

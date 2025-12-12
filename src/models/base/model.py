@@ -3,8 +3,8 @@ import numpy as np
 from datetime import datetime
 from copy import deepcopy
 
+from .tracker import TrackingHistory
 from src.cores.base import StormsMap
-from src.preprocessing import convert_contours_to_polygons
 
 class BasePrecipitationModel(ABC):
     """
@@ -14,9 +14,7 @@ class BasePrecipitationModel(ABC):
         identifier (SimpleContourIdentifier): The storm identifier used for identifying storms in radar images.
     """
     storms_maps: list[StormsMap]
-
-    def __init__(self):
-        pass
+    tracking_history: TrackingHistory
 
     @abstractmethod
     def identify_storms(self, dbz_img: np.ndarray, time_frame: datetime, map_id: str, threshold: float, filter_area: float) -> StormsMap:
@@ -32,6 +30,18 @@ class BasePrecipitationModel(ABC):
         """
         pass
 
+    @abstractmethod
+    def forecast(self, lead_time: float) -> StormsMap:
+        """
+        Forecast the storms map for a given lead time based on the current model state.
+
+        Args:
+            lead_time (float): The lead time in hours for which to forecast the storms map.
+        Returns:
+            StormsMap: The forecasted storms map at the specified lead time.
+        """
+        pass
+
     def copy(self):
         """
         Create a copy of the current model instance. This copy is mutable and independent of the original instance.
@@ -40,3 +50,4 @@ class BasePrecipitationModel(ABC):
         new_instance.storms_maps = []
 
         return new_instance
+

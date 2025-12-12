@@ -1,14 +1,16 @@
 import numpy as np
 from datetime import datetime, timedelta
+from tqdm.notebook import tqdm
 
 from src.cores.base import StormsMap
 from src.identification import BaseStormIdentifier, HypothesisIdentifier
 from src.preprocessing import convert_contours_to_polygons
+from src.models.base.model import BasePrecipitationModel
+from src.models.base.tracker import TrackingHistory, UpdateType
+from .matcher import StormMatcher
+from .storm import DbzStormsMap, ShapeVectorStorm
 
-from ..base import BasePrecipitationModel
-from .storm import ShapeVectorStorm
-from .matcher import StormMatcher, MAX_VELOCITY, MATCHING_THRESHOLD
-from .tracker import TrackingHistory
+from .default import DEFAULT_MAX_VELOCITY, DEFAULT_WEIGHTS, DEFAULT_COARSE_MATCHING_THRESHOLD, DEFAULT_FINE_MATCHING_THRESHOLD
 
 class OursPrecipitationModel(BasePrecipitationModel):
     """
@@ -22,58 +24,66 @@ class OursPrecipitationModel(BasePrecipitationModel):
     tracker: TrackingHistory
     storms_maps: list[StormsMap]
 
-    def __init__(self, identifier: HypothesisIdentifier, max_velocity: float = MAX_VELOCITY, matching_threshold: float = MATCHING_THRESHOLD):
+    def __init__(self, identifier: HypothesisIdentifier, max_velocity: float = DEFAULT_MAX_VELOCITY, weights: tuple[float, float] = DEFAULT_WEIGHTS):
         self.identifier = identifier
         self.storms_maps = []
-        self.matcher = StormMatcher(max_velocity=max_velocity, matching_threshold=matching_threshold)
+        self.matcher = StormMatcher(max_velocity=max_velocity, weights=weights)
         self.tracker = None
 
-    def identify_storms(self, dbz_img: np.ndarray, time_frame: datetime, map_id: str, threshold: int, filter_area: float) -> StormsMap:
+    def identify_storms(self, dbz_img: np.ndarray, time_frame: datetime, map_id: str, 
+                        threshold: int, filter_area: float, show_progress: bool = True) -> StormsMap:
         contours = self.identifier.identify_storm(dbz_img, threshold=threshold, filter_area=filter_area)
         polygons = convert_contours_to_polygons(contours)
         polygons = sorted(polygons, key=lambda x: x.area, reverse=True)
+
+        pbar = tqdm(enumerate(polygons), total=len(polygons), desc="Constructing ShapeVectorStorms", leave=False) \
+            if show_progress else enumerate(polygons)
 
         # Construct storms map
         storms = [ShapeVectorStorm(
                     polygon=polygon, 
                     id=f"{map_id}_storm_{idx}",
-                    global_contours=contours,
-                    img_shape=dbz_img.shape[:2]
-                ) for idx, polygon in enumerate(polygons)]
+                    dbz_map=dbz_img
+                ) for idx, polygon in pbar]
         
-        return StormsMap(storms, time_frame=time_frame)
+        return DbzStormsMap(storms, time_frame=time_frame, dbz_map=dbz_img)
 
-    def processing_map(self, curr_storms_map: StormsMap) -> int:
+    def processing_map(self, curr_storms_map: StormsMap, coarse_threshold: float = DEFAULT_COARSE_MATCHING_THRESHOLD, fine_threshold: float = DEFAULT_FINE_MATCHING_THRESHOLD) -> int:
         if len(self.storms_maps) == 0:
             self.tracker = TrackingHistory(curr_storms_map)
-            assignments = []
+            update_list = []
         else:
             prev_storms_map = self.storms_maps[-1]
-            dt = (curr_storms_map.time_frame - prev_storms_map.time_frame).seconds / 3600   # scaled to hour
+            if curr_storms_map.time_frame <= prev_storms_map.time_frame:
+                raise ValueError("Current storms map time frame must be later than the previous one.")
+            
+            update_list = self.matcher.match_storms(
+                storms_map_lst_1=prev_storms_map,
+                storms_map_lst_2=curr_storms_map,
+                coarse_threshold=coarse_threshold,
+                fine_threshold=fine_threshold
+            )
 
-            # match using Hungarian algorithm
-            ## the match result already includes split & merge
-            assignments, scores, displacements = self.matcher.match_storms(prev_storms_map, curr_storms_map)
-            mapping_curr = {curr_idx: [] for curr_idx in range(len(curr_storms_map.storms))}
-
-            for (prev_idx, curr_idx), score, displacement in zip(assignments, scores, displacements):
-                mapping_curr[int(curr_idx)] = [(int(prev_idx), score, displacement)]
-
-            self.tracker.update(mapping_curr, prev_storms_map, curr_storms_map)
-
-            # Update history movements to track history movement
-            for storm in curr_storms_map.storms:
-                storm_controller = self.tracker._get_track(storm.id)[0]
-                storm.contour_color = storm_controller["storm_lst"][-1].contour_color if len(storm_controller) >= 1 else storm.contour_color
-                storm.history_movements = [mv * dt for mv in storm_controller["movement"]]
-            self.storms_maps.append(curr_storms_map)
+            for info in update_list:
+                if info.update_type == UpdateType.NEW:
+                    self.tracker.add_new_track(
+                        new_storm=curr_storms_map.storms[info.curr_storm_order],
+                        time_frame=curr_storms_map.time_frame
+                    )
+                else:
+                    self.tracker.update_track(
+                        prev_storm=prev_storms_map.storms[info.prev_storm_order],
+                        curr_storm=curr_storms_map.storms[info.curr_storm_order],
+                        update_type=info.update_type,
+                        time_frame=curr_storms_map.time_frame,
+                        velocity=info.velocity
+                    )
 
         self.storms_maps.append(curr_storms_map)
-
-        right_matches = list(set([curr for _, curr in assignments]))
+        right_matches = list(set([info.curr_storm_order for info in update_list]))
         return len(right_matches)
     
-    def prediction(self, lead_time: float) -> StormsMap:
+    def forecast(self, lead_time: float) -> StormsMap:
         """
         Predict future storms up to lead_time based on the current storm map.
 

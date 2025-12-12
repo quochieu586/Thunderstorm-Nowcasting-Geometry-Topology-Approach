@@ -2,7 +2,7 @@ import numpy as np
 from datetime import datetime
 import cv2
 
-from ..base import BasePrecipitationModel
+from ..base.base import BasePrecipitationModel
 from src.identification import MorphContourIdentifier
 from src.preprocessing import convert_contours_to_polygons, convert_polygons_to_contours
 

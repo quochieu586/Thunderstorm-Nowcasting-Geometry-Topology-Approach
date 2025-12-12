@@ -4,7 +4,7 @@ from datetime import datetime
 from shapely.geometry import Point, Polygon
 
 from src.cores.base import StormsMap
-from ..base import BasePrecipitationModel
+from ..base.base import BasePrecipitationModel
 from src.identification import MorphContourIdentifier
 from src.preprocessing import convert_contours_to_polygons, convert_polygons_to_contours
 
