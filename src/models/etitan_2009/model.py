@@ -118,11 +118,10 @@ class ETitanPrecipitationModel(BasePrecipitationModel):
         Args:
             lead_time (float): The lead time in second for prediction.
         """
-        if self.tracker is None:
-            raise ValueError("No storm history available for prediction. Please process at least one storm map.")
+        dt = lead_time / 3600  # scaled to hour
+        current_map = self.storms_maps[-1]
+        new_storms = []
+        for storm in current_map.storms:
+            new_storms.append(storm.forecast(dt))
         
-        lead_time_hours = lead_time / 3600.0
-
-        return StormsMap([
-            self.tracker.forecast(storm.id, lead_time_hours) for storm in self.storms_maps[-1].storms
-        ], time_frame=self.storms_maps[-1].time_frame + timedelta(hours=lead_time_hours))
+        return StormsMap(storms=new_storms, time_frame=current_map.time_frame + timedelta(hours=dt), dbz_map=None)
