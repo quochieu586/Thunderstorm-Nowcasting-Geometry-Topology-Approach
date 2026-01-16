@@ -15,20 +15,27 @@ class StormObject(BaseObject):
     id: str    # Unique ID of this object for tracking over time
     original_id: str
     history_movements: list[tuple[float, float]]
+    centroid: tuple[float, float] = None
 
-    def __init__(self, contour: Union[Polygon, np.ndarray], id: str = ""):
+    def __init__(
+            self, contour: Union[Polygon, np.ndarray], 
+            history_movements: Optional[list[tuple[float, float]]] = [],
+            centroid: tuple[float, float] = None, id: str = ""
+        ):
         if type(contour) is np.ndarray:
             contour = convert_contours_to_polygons([contour])[0]
 
         self.contour = contour
+        self.centroid = centroid
         self.id = id
         self.original_id = id
-        self.history_movements = []
+        self.history_movements = history_movements
         self.contour_color = tuple(np.random.randint(0, 255, size=3).tolist())
 
     def copy(self) -> 'StormObject':
         return StormObject(
             contour=self.contour,
+            centroid=self.centroid,
             id=self.id,
             history_movements=self.history_movements.copy()
         )
@@ -52,3 +59,6 @@ class StormObject(BaseObject):
         """
         dy, dx = movement
         self.contour = translate(self.contour, xoff=dx, yoff=dy)
+        if self.centroid is not None:
+            cy, cx = self.centroid
+            self.centroid = (cy + dy, cx + dx)

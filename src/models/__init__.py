@@ -5,5 +5,10 @@
 from .ours import OursPrecipitationModel
 
 from .base.model import BasePrecipitationModel
+from .etitan_2009 import ETitanPrecipitationModel
 
-__all__ = ["BasePrecipitationModel", "OursPrecipitationModel"]
+__all__ = [
+    "BasePrecipitationModel", 
+    "OursPrecipitationModel", 
+    "ETitanPrecipitationModel"
+]
