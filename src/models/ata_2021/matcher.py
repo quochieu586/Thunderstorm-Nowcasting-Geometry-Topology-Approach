@@ -1,26 +1,29 @@
 import numpy as np
-from shapely.geometry import box
+from shapely.geometry import box, Point
 
+from src.cores.base import StormObject, StormsMap
+from src.cores.movement_estimate.fft import FFTMovement
 from src.tracking import BaseMatcher
+from ..base.tracker import MatchedStormPair, UpdateType
 
-from .storm import CentroidStorm
-from .storm_map import DbzStormsMap
-
-MAX_VELOCITY = 500          # pixels/hour
-MAX_VELOCITY_DIFF = 500     # pixels/hour
-MAX_COST = 45               # arbitrary units
+MAX_VELOCITY = 100          # pixels/hour
+MAX_VELOCITY_DIFF = 100     # pixels/hour
+MAX_COST = 50               # arbitrary units
 
 class Matcher(BaseMatcher):
+    fft: FFTMovement
     max_velocity: float
     max_velocity_diff: float
-
+    max_cost: float
+    
     def __init__(self, max_velocity: float = MAX_VELOCITY, max_velocity_diff: float = MAX_VELOCITY_DIFF, max_cost: float = MAX_COST):
         self.max_velocity = max_velocity            # maximum allowed velocity (pixels/hour) for truncation
         self.max_velocity_diff = max_velocity_diff  # maximum difference between historical and estimated velocity
         self.max_cost = max_cost                    # maximum cost for cost matrix
+        self.fft = FFTMovement(max_velocity=self.max_velocity)
 
     def _construct_disparity_matrix(
-            self, storm_lst1: list[CentroidStorm], storm_lst2: list[CentroidStorm], 
+            self, storm_lst1: list[StormObject], storm_lst2: list[StormObject], 
             shifts: np.ndarray
         ) -> np.ndarray:
         """
@@ -78,34 +81,34 @@ class Matcher(BaseMatcher):
         return 0.5 * (history_velocity + estimated_velocity)
 
     def match_storms(
-            self, storms_map_1: DbzStormsMap, storms_map_2: DbzStormsMap, history_velocities: list[np.ndarray]
-        ) -> tuple[np.ndarray, np.ndarray]:
+            self, storms_map_1: StormsMap, storms_map_2: StormsMap
+        ) -> list[MatchedStormPair]:
         """
         Match storms between 2 time frames.
 
         Args:
-            storms_map_1 (DbzStormsMap): Previous storms map.
-            storms_map_2 (DbzStormsMap): Current storms map.
+            storms_map_1 (StormsMap): Previous storms map.
+            storms_map_2 (StormsMap): Current storms map.
             history_velocities (list[np.ndarray]): Previously recorded velocities for storms in storms_map_1.
         
         Returns:
-            tuple[np.ndarray, np.ndarray]: 
-                + matched indices (N x 2) where N is the number of matched storm pairs.
-                + cost matrix (num_storms_1 x num_storms_2).
+            list[MatchedStormPair]: List of matched storm pairs.
         """
-        # region_list (list[min_y, min_x, max_y, max_x]): regions for each storm without the buffer
-        region_list = storms_map_1.fft_estimate(storms_map_2, max_velocity=self.max_velocity)
-        dt = (storms_map_2.time_frame - storms_map_1.time_frame).total_seconds() / 3600.0  # in hours
-        max_displacement = self.max_velocity * dt
+        # Step 1.1: Estimate movements via FFT
+        fft_estimated_movements, region_list = self.fft.estimate_movement(
+            storms_map_1, storms_map_2
+        )                               # (Unit: pixels / hour)
 
-        # Step 1: Retrieve displacements
-        estimated_velocities = [
-            np.array(storm.estimated_velocity) for storm in storms_map_1.storms
-        ]
+        # Step 1.2: Get historical velocities
+        history_velocities = []         # (Unit: pixels / hour)
+        for storm in storms_map_1.storms:
+            history_velocities.append(storm.get_movement())
+
+        dt = (storms_map_2.time_frame - storms_map_1.time_frame).total_seconds() / 3600.0  # in hours
 
         corrected_shifts = np.array([
             self._process_velocity(history_velocity, estimated_velocity) * dt
-            for history_velocity, estimated_velocity in zip(history_velocities, estimated_velocities)
+            for history_velocity, estimated_velocity in zip(history_velocities, fft_estimated_movements)
         ])
 
         # step 2: Retrieve search regions = original regions + corrected shifts
@@ -149,4 +152,121 @@ class Matcher(BaseMatcher):
         assignment_mask = np.zeros_like(invalid_mask, dtype=bool)
         assignment_mask[row_ind, col_ind] = True
 
-        return np.argwhere(assignment_mask & valid_mask), cost_matrix
+        idx_pairs = np.argwhere(assignment_mask & valid_mask)
+
+        # update the history movement
+        assignments: list[MatchedStormPair] = []
+        for prev_idx, curr_idx in idx_pairs:
+            assignments.append(MatchedStormPair(
+                prev_storm_order=prev_idx,
+                curr_storm_order=curr_idx,
+                update_type=UpdateType.MATCHED,
+                estimated_movement=corrected_shifts[prev_idx]   # (Unit: pixels)
+            ))
+        
+        # resolve split & merge
+        mapping_prev = {int(prev_idx): [int(curr_idx)] for prev_idx, curr_idx in idx_pairs}
+        mapping_curr = {int(curr_idx): [int(prev_idx)] for prev_idx, curr_idx in idx_pairs}
+
+        ## Predict storms in storm_map1 to storm_map2 time_frame
+        pred_storms_map = StormsMap([
+            storm.copy()
+            for storm in storms_map_1.storms
+        ], time_frame=storms_map_2.time_frame)
+
+        # for storm, shift in zip(pred_storms_map.storms, corrected_shifts):
+        #     storm.make_move(shift)
+
+        ## Check for merging
+        for prev_idx in range(len(storms_map_1.storms)):
+            if prev_idx in mapping_prev:
+                continue
+
+            pred_storm = pred_storms_map.storms[prev_idx]
+
+            # Find storms that the predicted centroid fall into.
+            candidates = [idx for idx, storm in enumerate(storms_map_2.storms) if storm.contour.contains(Point(pred_storm.centroid))]
+            
+            # Case: more than 1 candidates => choose one with maximum overlapping on prev_storm
+            if len(candidates) > 1:
+                compute_overlapping = lambda pol: pred_storm.contour.intersection(pol).area / pred_storm.contour.area
+                max_idx = np.argmax([compute_overlapping(storms_map_2.storms[j].contour) for j in candidates])
+                candidates = [candidates[max_idx]]
+            
+            if len(candidates) == 0:
+                continue
+            
+            curr_idx = candidates[0]
+            mapping_prev[prev_idx] = [curr_idx]
+
+            if curr_idx not in mapping_curr:
+                mapping_curr[curr_idx] = [prev_idx]
+                assignments.append(MatchedStormPair(
+                    prev_storm_order=prev_idx,
+                    curr_storm_order=curr_idx,
+                    update_type=UpdateType.MATCHED,
+                    estimated_movement=corrected_shifts[prev_idx]   # (Unit: pixels)
+                ))
+            else:
+                mapping_curr[curr_idx].append(prev_idx)
+                assignments.append(MatchedStormPair(
+                    prev_storm_order=prev_idx,
+                    curr_storm_order=curr_idx,
+                    update_type=UpdateType.MERGED,
+                    estimated_movement=corrected_shifts[prev_idx]   # (Unit: pixels)
+                ))
+        
+        ## Check for splitting
+        for curr_idx in range(len(storms_map_2.storms)):
+            if curr_idx in mapping_curr:
+                continue
+
+            curr_storm = storms_map_2.storms[curr_idx]
+
+            # Find storms that the current centroid fall into.
+            candidates = [idx for idx, storm in enumerate(pred_storms_map.storms) if storm.contour.contains(Point(curr_storm.centroid))]
+            
+            # Case: more than 1 candidates => choose one with maximum overlapping on curr_storm
+            if len(candidates) > 1:
+                compute_overlapping = lambda pol: curr_storm.contour.intersection(pol).area / curr_storm.contour.area
+                max_idx = np.argmax([compute_overlapping(pred_storms_map.storms[j].contour) for j in candidates])
+                candidates = [candidates[max_idx]]
+            
+            if len(candidates) == 0:
+                continue
+            
+            prev_idx = candidates[0]
+            mapping_curr[curr_idx] = [prev_idx]
+
+            if prev_idx not in mapping_prev:
+                mapping_prev[prev_idx] = [curr_idx]
+                assignments.append(MatchedStormPair(
+                    prev_storm_order=prev_idx,
+                    curr_storm_order=curr_idx,
+                    update_type=UpdateType.MATCHED,
+                    estimated_movement=corrected_shifts[prev_idx]   # (Unit: pixels)
+                ))
+            else:
+                mapping_prev[prev_idx].append(curr_idx)
+                assignments.append(MatchedStormPair(
+                    prev_storm_order=prev_idx,
+                    curr_storm_order=curr_idx,
+                    update_type=UpdateType.SPLITTED,
+                    estimated_movement=corrected_shifts[prev_idx]   # (Unit: pixels)
+                ))
+
+        # Finally, add NEW storms
+        matched_curr_indices = set([pair.curr_storm_order for pair in assignments])
+        for curr_idx in range(len(storms_map_2.storms)):
+            if curr_idx in matched_curr_indices:
+                continue
+            assignments.append(MatchedStormPair(
+                prev_storm_order=-1,
+                curr_storm_order=curr_idx,
+                update_type=UpdateType.NEW,
+                estimated_movement=np.array([0.0, 0.0])   # (Unit: pixels)
+            ))
+        
+        # Sort to ensure MATCHED are processed first
+        assignments.sort(key=lambda x: x.update_type.value)
+        return assignments
