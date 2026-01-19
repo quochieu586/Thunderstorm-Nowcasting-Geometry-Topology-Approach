@@ -32,6 +32,7 @@ def read_nexrad_grid(path: Path):
 
 def read_numpy_grid(path: Path):
     arr = np.load(path)
+    arr = np.nan_to_num(arr, nan=0.0)
     return arr
 
 def draw_orthogonal_hull(orthogonal_hull: Union[list, Any], image: np.ndarray, color: Tuple[int, int, int] = (0,0,255)):
