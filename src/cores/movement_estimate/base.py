@@ -32,6 +32,21 @@ class BaseTREC(ABC):
 
         return (dy, dx)
 
+    def get_storm_centroid_movement(
+            self, storm: StormObject, grid_y: np.ndarray, grid_x: np.ndarray, vy: np.ndarray, vx: np.ndarray
+        ) -> tuple[float, float]:
+        """
+        Aproximating the movement of the storm using the velocity field at the centroid location.
+        Returns (dy, dx)
+        """
+        centroid_y, centroid_x = storm.centroid
+        grid_y_idx = np.clip(np.searchsorted(grid_y, centroid_y) - 1, 0, len(grid_y)-2)
+        grid_x_idx = np.clip(np.searchsorted(grid_x, centroid_x) - 1, 0, len(grid_x)-2)
+        dy = vy[grid_y_idx, grid_x_idx]
+        dx = vx[grid_y_idx, grid_x_idx]
+
+        return (dy, dx)
+
     @abstractmethod
     def estimate_movement(
             self, prev_map: StormsMap, curr_map: StormsMap
