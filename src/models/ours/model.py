@@ -1,4 +1,5 @@
 import numpy as np
+from torch import from_numpy
 from datetime import datetime, timedelta
 from tqdm.notebook import tqdm
 
@@ -7,10 +8,13 @@ from src.identification import BaseStormIdentifier, HypothesisIdentifier
 from src.preprocessing import convert_contours_to_polygons
 from src.models.base.model import BasePrecipitationModel
 from src.models.base.tracker import TrackingHistory, UpdateType
+
+from src.cores.polar_description_vector import fft_conv2d, construct_polar_kernels
+
 from .matcher import StormMatcher
 from .storm import DbzStormsMap, ShapeVectorStorm
 
-from .default import DEFAULT_MAX_VELOCITY, DEFAULT_WEIGHTS, DEFAULT_COARSE_MATCHING_THRESHOLD, DEFAULT_FINE_MATCHING_THRESHOLD
+from .default import DEFAULT_MAX_VELOCITY, DEFAULT_WEIGHTS, DEFAULT_COARSE_MATCHING_THRESHOLD, DEFAULT_FINE_MATCHING_THRESHOLD, DEFAULT_DENSITY, DEFAULT_NUM_SECTORS, DEFAULT_RADII
 
 class OursPrecipitationModel(BasePrecipitationModel):
     """
@@ -24,28 +28,57 @@ class OursPrecipitationModel(BasePrecipitationModel):
     tracker: TrackingHistory
     storms_maps: list[StormsMap]
 
-    def __init__(self, identifier: HypothesisIdentifier, max_velocity: float = DEFAULT_MAX_VELOCITY, weights: tuple[float, float] = DEFAULT_WEIGHTS):
+    def __init__(self, identifier: HypothesisIdentifier, max_velocity: float = DEFAULT_MAX_VELOCITY, weights: tuple[float, float] = DEFAULT_WEIGHTS,
+                 radii: list[int] = DEFAULT_RADII, num_sectors: int = DEFAULT_NUM_SECTORS, density: float = DEFAULT_DENSITY):
         self.identifier = identifier
         self.storms_maps = []
         self.matcher = StormMatcher(max_velocity=max_velocity, weights=weights)
         self.tracker = None
 
-    def identify_storms(self, dbz_img: np.ndarray, time_frame: datetime, map_id: str, 
-                        threshold: int, filter_area: float, show_progress: bool = True) -> StormsMap:
+        self.radii = radii
+        self.num_sectors = num_sectors
+        self.density = density
+
+        self.kernels = construct_polar_kernels(radii, num_sectors)
+
+    # def identify_storms(self, dbz_img: np.ndarray, time_frame: datetime, map_id: str, 
+    #                     threshold: int, filter_area: float, show_progress: bool = True) -> StormsMap:
+    #     contours = self.identifier.identify_storm(dbz_img, threshold=threshold, filter_area=filter_area)
+    #     polygons = convert_contours_to_polygons(contours)
+    #     polygons = sorted(polygons, key=lambda x: x.area, reverse=True)
+
+    #     pbar = tqdm(enumerate(polygons), total=len(polygons), desc="Constructing ShapeVectorStorms", leave=False) \
+    #         if show_progress else enumerate(polygons)
+
+    #     # Construct storms map
+    #     storms = [ShapeVectorStorm(
+    #                 polygon=polygon, 
+    #                 id=f"{map_id}_storm_{idx}",
+    #                 dbz_map=dbz_img,
+    #                 density=self.density,
+    #                 radii=self.radii,
+    #                 num_sectors=self.num_sectors
+    #             ) for idx, polygon in pbar]
+        
+    #     return DbzStormsMap(storms, time_frame=time_frame, dbz_map=dbz_img)
+    
+    def identify_storms(self, dbz_img: np.ndarray, time_frame: datetime, map_id: str, threshold: int, filter_area: float) -> StormsMap:
         contours = self.identifier.identify_storm(dbz_img, threshold=threshold, filter_area=filter_area)
         polygons = convert_contours_to_polygons(contours)
         polygons = sorted(polygons, key=lambda x: x.area, reverse=True)
 
-        pbar = tqdm(enumerate(polygons), total=len(polygons), desc="Constructing ShapeVectorStorms", leave=False) \
-            if show_progress else enumerate(polygons)
+        # Pre-compute the convolution of the dbz map with all sector kernels
+        img = from_numpy(dbz_img >= threshold).float().unsqueeze(0).unsqueeze(0)  # Shape: (1, 1, H, W)
+        sectors_convolved_np = fft_conv2d(img=img, kernel=from_numpy(self.kernels).unsqueeze(1).float())
 
-        # Construct storms map
         storms = [ShapeVectorStorm(
-                    polygon=polygon, 
-                    id=f"{map_id}_storm_{idx}",
-                    dbz_map=dbz_img
-                ) for idx, polygon in pbar]
-        
+            polygon=polygon, 
+            id=f"{map_id}_storm_{idx}",
+            dbz_map=dbz_img,
+            density=self.density,
+            sectors_convolved_np=sectors_convolved_np,
+        ) for idx, polygon in enumerate(polygons)]
+
         return DbzStormsMap(storms, time_frame=time_frame, dbz_map=dbz_img)
 
     def processing_map(self, curr_storms_map: StormsMap, coarse_threshold: float = DEFAULT_COARSE_MATCHING_THRESHOLD, fine_threshold: float = DEFAULT_FINE_MATCHING_THRESHOLD) -> int:
