@@ -21,6 +21,19 @@ class UpdateType(Enum):
     SPLITTED = 2
     NEW = 3
 
+@dataclass
+class MatchedStormPair:
+    """
+    Maintain matched storms pairs information.
+    """
+    prev_storm_order: int
+    curr_storm_order: int
+    estimated_movement: np.ndarray = field(default=None)   # (dy, dx)
+    update_type: UpdateType = field(default=UpdateType.MATCHED)
+
+    def derive_motion_vector(self, dt: float) -> np.ndarray:
+        return self.estimated_movement / dt
+
 class TrackingHistory:
     tracks: list[StormTrack] = field(default_factory=list)
     storms_dict: dict[int, int] = field(default_factory=dict) # Mapping from storm ID to track ID
@@ -31,24 +44,6 @@ class TrackingHistory:
         for storm in storms_map.storms:
             self.add_new_track(storm, storms_map.time_frame)
     
-    def _interpolate_velocity(self, velocity_lst: list[np.ndarray], alpha_decay: float = 0.5):
-        """
-        Interpolate the velocity using weighted average with decay factor alpha_decay.
-
-        Args:
-            velocity_lst (list[np.ndarray]): list of velocity vectors.
-            alpha_decay (float, default=0.5): the decay factor.
-
-        Returns:
-            interpolated_velocity (np.ndarray): the interpolated velocity.
-        """
-        if len(velocity_lst) == 1:
-            return velocity_lst[0]
-        
-        weights = np.array([alpha_decay**i for i in range(len(velocity_lst))])
-        total_w = np.sum(weights)
-        return np.sum([displ * w / total_w for displ, w in zip(velocity_lst[::-1], weights)], axis=0)
-
     def _handle_merge(self):
         pass
 
@@ -97,55 +92,6 @@ class TrackingHistory:
             self.tracks.append(new_track)
             self.storms_dict[curr_storm.id] = id
             curr_storm.track_history(prev_storm, velocity)
-
-    def get_movement(self, storm_id: str, time_frame: datetime) -> list[np.ndarray]:
-        """
-        Get the list of recorded movements for the storm with storm_id.
-
-        Args:
-            storm_id (int): id of the storm.
-
-        Returns:
-            movement_lst (list[np.ndarray]): list of recorded movements.
-        """
-        track_id = self.storms_dict[storm_id]
-        track = self.tracks[track_id]
-            
-        curr_storm: StormObject = track.storms[time_frame]
-
-        history_movements = curr_storm.history_movements
-        if len(history_movements) == 0:
-            warnings.warn(f"No recorded movement for storm {storm_id} at time {time_frame}. Returning [None, None].")
-            return [None, None]
-        
-        return self._interpolate_velocity(curr_storm.history_movements)
-    
-    def forecast(self, storm_id: str, dt: float, default_motion: np.ndarray = np.array([0,0])) -> StormObject:
-        """
-        Make a forecast for the next position of the track with track_id using the history.
-        
-        Args:
-            storm_id (int): id of the storm.
-            dt (float): the interval between the current and next frame.
-            default_motion (np.ndarray, default): default motion used in case there is no recorded history.
-        
-        Returns:
-            storm (CentroidStorm): the estimated storm in the next frame.
-        """
-        track_id = self.storms_dict[storm_id]
-        track = self.tracks[track_id]
-            
-        curr_storm: StormObject = track.storms[max(track.storms.keys())]
-
-        velocity_lst = curr_storm.history_movements
-        if len(velocity_lst) == 0:      # if no recorded velocity => use the default motion.
-            velocity_lst = [default_motion]
-        
-        displacement = self._interpolate_velocity(velocity_lst) * dt
-        new_storm = curr_storm.copy()
-        new_storm.make_move(displacement)
-
-        return new_storm
     
     def print_tracks(self):
         """

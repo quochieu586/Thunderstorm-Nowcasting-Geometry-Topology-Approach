@@ -4,3 +4,8 @@ __pycache__/
 
 */__pycache__/
 public/
+
+output/
+
+# DS store files
+.DS_Store

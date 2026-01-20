@@ -1,42 +1,40 @@
-import numpy as np
 import cv2
+import numpy as np
 from datetime import datetime, timedelta
 
-from src.cores.base import StormsMap, StormObject
-from src.identification import SimpleContourIdentifier
+from src.cores.base import StormObject, StormsMap
+from src.models.base.model import BasePrecipitationModel
+from src.identification import MorphContourIdentifier
 from src.preprocessing import convert_contours_to_polygons, convert_polygons_to_contours
+from src.cores.movement_estimate import BaseTREC, TREC
 
-from .matcher import Matcher
-from ..base.model import BasePrecipitationModel
-from ..base.tracker import UpdateType, MatchedStormPair, TrackingHistory
+from .matcher import STitanMatcher, MatchedStormPair
+from ..base.tracker import TrackingHistory, UpdateType
+from .storm import ParticleStorm
 
-class AdaptiveTrackingPrecipitationModel(BasePrecipitationModel):
+DENSITY = 0.05  # particle density
+
+class STitanPrecipitationModel(BasePrecipitationModel):
     """
-    Precipitation modeling using adaptive contour-based storm identification and tracking. This is from Adaptive Tracker algorithm.
-
-    Attributes:
-        identifier (SimpleContourIdentifier): The storm identifier used for identifying storms in radar images.
+    STitan model implementation for thunderstorm nowcasting.
     """
-    identifier: SimpleContourIdentifier
-    matcher: Matcher
-    tracker: TrackingHistory
+    identifier: MorphContourIdentifier
     storms_maps: list[StormsMap]
+    tracker: TrackingHistory
+    matcher: STitanMatcher
 
-    def __init__(
-            self, 
-            identifier: SimpleContourIdentifier, 
-            max_velocity: float = 100, 
-            max_velocity_diff: float = 100, 
-            max_cost: float = 50
-        ):
+    def __init__(self, identifier: MorphContourIdentifier, trec: BaseTREC = None):
         self.identifier = identifier
-        self.matcher = Matcher(
-                max_velocity=max_velocity, max_velocity_diff=max_velocity_diff, max_cost=max_cost
-            )
-        self.tracker = None
         self.storms_maps = []
+        if trec is None:
+            trec = TREC()
 
-    def identify_storms(self, dbz_map: np.ndarray, time_frame: datetime, map_id: str, threshold: float, filter_area: float) -> StormsMap:
+        self.matcher = STitanMatcher(trec=trec)
+        self.tracker = None
+
+    def identify_storms(
+            self, dbz_map: np.ndarray, time_frame: datetime, map_id: str, threshold: float, filter_area: float, particle_density: float = DENSITY
+        ) -> StormsMap:
         """
         Identify storms in the given DBZ image at the specified timestamp.
 
@@ -73,18 +71,20 @@ class AdaptiveTrackingPrecipitationModel(BasePrecipitationModel):
                 cy = (y_idx * weights).sum() / total_weight
                 centroid = (int(cy), int(cx))
 
-            # storms.append(CentroidStorm(polygon, centroid=centroid, id=f"{map_id}_storm_{idx}", img_shape=dbz_map.shape[:2]))
-            storms.append(StormObject(polygon, centroid=centroid, id=f"{map_id}_storm_{idx}"))
+            storms.append(
+                ParticleStorm(polygon, centroid=centroid, id=f"{map_id}_storm_{idx}", shape=dbz_map.shape[:2], density=particle_density)
+            )
             
         return StormsMap(storms=storms, time_frame=time_frame, dbz_map=dbz_map)
     
-    def processing_map(self, curr_storms_map: StormsMap) -> int:
-        if len(self.storms_maps) == 0:
+    def processing_map(self, curr_storms_map: StormsMap):
+        if self.storms_maps == []:
             self.storms_maps.append(curr_storms_map)
             self.tracker = TrackingHistory(curr_storms_map)
+
         else:
             prev_storms_map = self.storms_maps[-1]
-            dt = (curr_storms_map.time_frame - prev_storms_map.time_frame).total_seconds() / 3600   # scaled to hour
+            dt = (curr_storms_map.time_frame - prev_storms_map.time_frame).seconds / 3600   # scaled to hour
 
             # match using Hungarian algorithm
             matched: list[MatchedStormPair] = self.matcher.match_storms(prev_storms_map, curr_storms_map)
@@ -105,7 +105,7 @@ class AdaptiveTrackingPrecipitationModel(BasePrecipitationModel):
                     )
 
             self.storms_maps.append(curr_storms_map)
-    
+
     def forecast(self, lead_time: float) -> StormsMap:
         """
         Predict future storms up to lead_time based on the current storm map.
