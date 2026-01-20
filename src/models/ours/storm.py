@@ -5,7 +5,7 @@ from shapely.geometry import Polygon
 from shapely.affinity import translate, rotate
 import rasterio.features as rfeat
 from sklearn.cluster import KMeans
-from tqdm.notebook import tqdm
+# from tqdm.notebook import tqdm
 from datetime import datetime
 
 from src.cores.base import StormObject
@@ -70,10 +70,10 @@ def construct_shape_vector_dbz(
 
     shape_vectors = np.zeros((particles.shape[0], len(radii) * num_sectors), dtype=np.float32)
 
-    if show_progess:
-        pbar = tqdm(enumerate(particles), total=particles.shape[0], leave=False, desc=desc)
-    else:
-        pbar = enumerate(particles)
+    # if show_progess:
+        # pbar = tqdm(enumerate(particles), total=particles.shape[0], leave=False, desc=desc)
+    # else:
+    pbar = enumerate(particles)
 
     for p_idx, (yoff, xoff) in pbar:    # since particles are in (y, x) order
         sector_mask = shift_mask(sector_mask_template, xoff, yoff, origin)
@@ -88,8 +88,8 @@ class ShapeVectorStorm(StormObject):
     centroid: tuple[float, float]
 
     def __init__(
-            self, polygon: Polygon, dbz_map: np.ndarray, id: str = "",
-            density: float = DEFAULT_DENSITY, radii: list[float] = DEFAULT_RADII, num_sectors: int = DEFAULT_NUM_SECTORS
+            self, polygon: Polygon, dbz_map: np.ndarray, id: str = "", density: float = DEFAULT_DENSITY, sectors_convolved_np: np.ndarray = None,
+            radii: list[float] = DEFAULT_RADII, num_sectors: int = DEFAULT_NUM_SECTORS
         ):
         # initialize with the contour and the id
         super().__init__(contour=polygon, id=id)
@@ -97,13 +97,15 @@ class ShapeVectorStorm(StormObject):
         particles = self._sample_particles(contour, density, dbz_map.shape)
 
         # create the shape vectors
-        vectors = construct_shape_vector_dbz(
-            dbz_map=dbz_map, particles=particles, num_sectors=num_sectors, radii=radii, 
-            desc=f"Constructing shape vectors for {self.id}"
-        )
+        if sectors_convolved_np is None:
+            vectors = construct_shape_vector_dbz(
+                dbz_map=dbz_map, particles=particles, num_sectors=num_sectors, radii=radii, 
+                desc=f"Constructing shape vectors for {self.id}"
+            )
+        else:
+            vectors = sectors_convolved_np[:, particles[:, 1], particles[:, 0]].T  # shape (num_particles, num_sectors * num_radii)
 
         self.centroid = (self.contour.centroid.y, self.contour.centroid.x)
-
         self.shape_vectors = [ShapeVector(
             coord=(coord[0], coord[1]), vector=vector
         ) for coord, vector in zip(particles.reshape(-1, 2), vectors)]
