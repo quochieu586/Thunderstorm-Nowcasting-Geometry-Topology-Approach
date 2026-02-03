@@ -6,21 +6,19 @@ from src.cores.movement_estimate.fft import FFTMovement
 from src.tracking import BaseMatcher
 from ..base.tracker import MatchedStormPair, UpdateType
 
-MAX_VELOCITY = 100          # pixels/hour
-MAX_VELOCITY_DIFF = 100     # pixels/hour
-MAX_COST = 50               # arbitrary units
-
 class Matcher(BaseMatcher):
     fft: FFTMovement
     max_velocity: float
     max_velocity_diff: float
     max_cost: float
     
-    def __init__(self, max_velocity: float = MAX_VELOCITY, max_velocity_diff: float = MAX_VELOCITY_DIFF, max_cost: float = MAX_COST):
+    def __init__(
+            self, fft: FFTMovement, max_velocity: float, max_velocity_diff: float, max_cost: float
+        ):
         self.max_velocity = max_velocity            # maximum allowed velocity (pixels/hour) for truncation
         self.max_velocity_diff = max_velocity_diff  # maximum difference between historical and estimated velocity
         self.max_cost = max_cost                    # maximum cost for cost matrix
-        self.fft = FFTMovement(max_velocity=self.max_velocity)
+        self.fft = fft
 
     def _construct_disparity_matrix(
             self, storm_lst1: list[StormObject], storm_lst2: list[StormObject], 

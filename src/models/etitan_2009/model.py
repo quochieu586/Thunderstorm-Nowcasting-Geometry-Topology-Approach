@@ -19,26 +19,28 @@ class ETitanPrecipitationModel(BasePrecipitationModel):
     storms_maps: list[StormsMap]
     tracker: TrackingHistory
     matcher: EtitanMatcher
+    max_velocity: float     # pixel/hr
 
-    def __init__(self, identifier: MorphContourIdentifier, trec: BaseTREC = None):
+    def __init__(self, identifier: MorphContourIdentifier, trec: BaseTREC = None, max_velocity: float = 200.0):
         self.identifier = identifier
         self.storms_maps = []
         if trec is None:
             trec = TREC()
-
-        self.matcher = EtitanMatcher(self._dynamic_max_velocity, trec)
+        
+        self.max_velocity = max_velocity
         self.tracker = None
+        self.matcher = EtitanMatcher(self._dynamic_max_velocity, trec)
 
     def _dynamic_max_velocity(self, area: float) -> float:
         """
         Dynamic constraint for maximum velocity based on storm area. The unit of velocity is pixel/hr.
         """
-        if area < 300:
-            return 100
-        elif area < 500:
-            return 200
+        if area < 1200:
+            return self.max_velocity
+        elif area < 2000:
+            return self.max_velocity * 1.5
         else:
-            return 500
+            return self.max_velocity * 2
 
     def identify_storms(self, dbz_map: np.ndarray, time_frame: datetime, map_id: str, threshold: float, filter_area: float) -> StormsMap:
         """
