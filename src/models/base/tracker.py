@@ -14,6 +14,8 @@ class StormTrack:
     start_frame: datetime
     merged_to: Optional['StormTrack'] = None                        # ID of the storm this storm merged into
     splitted_from: Optional['StormTrack'] = None                    # ID of the storm this storm splitted from
+    merged_at: Optional[datetime] = None
+    splitted_at: Optional[datetime] = None
 
 class UpdateType(Enum):
     MATCHED = 0
@@ -37,10 +39,12 @@ class MatchedStormPair:
 class TrackingHistory:
     tracks: list[StormTrack] = field(default_factory=list)
     storms_dict: dict[int, int] = field(default_factory=dict) # Mapping from storm ID to track ID
+    splits_dict: dict[int, list[int]] = field(default_factory=dict) # Mapping from original track ID to list of split track IDs
 
     def __init__(self, storms_map: StormsMap):
         self.tracks = []
         self.storms_dict = dict()
+        self.splits_dict = dict()
         for storm in storms_map.storms:
             self.add_new_track(storm, storms_map.time_frame)
     
@@ -65,33 +69,54 @@ class TrackingHistory:
         """
         Update an existing StormTrack with a new storm observation.
         """
-        track_id = self.storms_dict.get(prev_storm.id)
+        prev_track_id = self.storms_dict.get(prev_storm.id)
 
-        if track_id is None:
+        if prev_track_id is None:
             raise ValueError(f"Previous storm ID {prev_storm.id} not found in tracking history.")
         
         # Get the Storm Track to update
-        track = self.tracks[track_id]
+        prev_track = self.tracks[prev_track_id]
 
         if update_type == UpdateType.MATCHED:               # Case 1 - Matched: Simply append the new storm to the existing track
-            track.storms[time_frame] = curr_storm
-            self.storms_dict[curr_storm.id] = track_id
+            prev_track.storms[time_frame] = curr_storm
+            self.storms_dict[curr_storm.id] = prev_track_id
             curr_storm.track_history(prev_storm, velocity)
             
         elif update_type == UpdateType.MERGED:              # Case 2 - Merged: Append the new storm and mark the track as merged
+            # prev_track.storms[time_frame] = curr_storm
             curr_track_id = self.storms_dict.get(curr_storm.id)
-            track.merged_to = self.tracks[curr_track_id]
+            prev_track.merged_to = self.tracks[curr_track_id]
+            prev_track.merged_at = time_frame
         else:                                               # Case 3 - Splitted: Create a new track for the splitted storm with a reference to the original track
+            # print(f"Splitting storm {curr_storm.id} from track {track.id}")
             id = len(self.tracks)
             new_track = StormTrack(
                 id=id,
                 storms={time_frame: curr_storm},
                 start_frame=time_frame,
-                splitted_from=track
+                splitted_from=prev_track,
+                splitted_at=time_frame
             )
             self.tracks.append(new_track)
             self.storms_dict[curr_storm.id] = id
+            
+            # Record the split: original track -> list of split track IDs
+            if prev_track.id not in self.splits_dict:
+                self.splits_dict[prev_track.id] = []
+            self.splits_dict[prev_track.id].append(id)
+            
+            # print(f"New storm {curr_storm.id} assigned to track {id}")
             curr_storm.track_history(prev_storm, velocity)
+            # self.print_track_length(track.id)
+    def print_track_length(self, track_id: int):
+        """
+        Print the current length of a specific track.
+        """
+        if 0 <= track_id < len(self.tracks):
+            track = self.tracks[track_id]
+            print(f"Track {track_id}: Current length = {len(track.storms)}")
+        else:
+            print(f"Track ID {track_id} not found.")
     
     def print_tracks(self):
         """
