@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 from datetime import datetime, timedelta
+from typing import Callable
 
 from src.cores.base import StormObject, StormsMap
 from src.models.base.model import BasePrecipitationModel
@@ -20,16 +21,21 @@ class ETitanPrecipitationModel(BasePrecipitationModel):
     tracker: TrackingHistory
     matcher: EtitanMatcher
 
-    def __init__(self, identifier: MorphContourIdentifier, trec: BaseTREC = None):
+    def __init__(self, identifier: MorphContourIdentifier, 
+                 trec: BaseTREC = None, _dynamic_max_velocity: Callable[[float], float] = None):
         self.identifier = identifier
         self.storms_maps = []
         if trec is None:
             trec = TREC()
 
-        self.matcher = EtitanMatcher(self._dynamic_max_velocity, trec)
+        if _dynamic_max_velocity is None:
+            _dynamic_max_velocity = self._default_dynamic_max_velocity
+        
+        self.matcher = EtitanMatcher(_dynamic_max_velocity, trec)
+
         self.tracker = None
 
-    def _dynamic_max_velocity(self, area: float) -> float:
+    def _default_dynamic_max_velocity(self, area: float) -> Callable[[float], float]:
         """
         Dynamic constraint for maximum velocity based on storm area. The unit of velocity is pixel/hr.
         """

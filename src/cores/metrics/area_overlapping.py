@@ -5,6 +5,21 @@ from shapely.ops import unary_union
 
 from src.cores.base import StormsMap
 
+class PredictionBenchmarkModel:
+    def __init__(self):
+        self.pods = []
+        self.fars = []
+        self.csis = []
+        self.actual = []
+        self.predicted = []
+
+    def evaluate_predict(self, actual_storms_map: StormsMap, predicted_storms_map: StormsMap):
+        self.actual.append(actual_storms_map)
+        self.predicted.append(predicted_storms_map)
+        self.pods.append(pod_score(actual_storms_map, predicted_storms_map))
+        self.fars.append(far_score(actual_storms_map, predicted_storms_map))
+        self.csis.append(csi_score(actual_storms_map, predicted_storms_map))
+
 def overlapping_storm_area(contour_1: Polygon, contour_2: Polygon) -> float:
     """
     Calculate the overlapping area between two contours.

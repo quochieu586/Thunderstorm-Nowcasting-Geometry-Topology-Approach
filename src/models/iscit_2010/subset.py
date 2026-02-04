@@ -92,7 +92,7 @@ class SubsetResolver:
         resolve the subset to get final assignments between 2 time frames.
         """
         # compute maximum displacement
-        dt = (storms_map_lst_1.time_frame - storms_map_lst_2.time_frame).total_seconds() / 3600.0
+        dt = (storms_map_lst_2.time_frame - storms_map_lst_1.time_frame).total_seconds() / 3600.0
         maximum_displacement = max_velocity * dt
         particles_matcher = ParticleMatcher()
 
