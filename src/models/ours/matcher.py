@@ -10,14 +10,16 @@ from src.models.base.tracker import UpdateType
 from .particle_matcher import MatchedStormInfo, ParticleMatcher
 from .storm import DbzStormsMap
 
+from ..base.tracker import MatchedStormPair
+
 from .default import DEFAULT_COARSE_MATCHING_THRESHOLD, DEFAULT_FINE_MATCHING_THRESHOLD
 
-@dataclass
-class UpdateInfo:
-    prev_storm_order: int
-    curr_storm_order: int
-    update_type: UpdateType
-    velocity: np.ndarray = field(default=None)
+# @dataclass
+# class UpdateInfo:
+#     prev_storm_order: int
+#     curr_storm_order: int
+#     update_type: UpdateType
+#     velocity: np.ndarray = field(default=None)
 
 @dataclass
 class CellSubset:
@@ -77,7 +79,7 @@ class StormMatcher(BaseMatcher):
     def match_storms(
             self, storms_map_lst_1: DbzStormsMap, storms_map_lst_2: DbzStormsMap,
             coarse_threshold: float = DEFAULT_COARSE_MATCHING_THRESHOLD, fine_threshold: float = DEFAULT_FINE_MATCHING_THRESHOLD
-        ) -> list[UpdateInfo]:
+        ) -> list[MatchedStormPair]:
         """
         Match storms between 2 time frame.
 
@@ -223,17 +225,18 @@ class StormMatcher(BaseMatcher):
             inherited[curr_idx]['fine_motion'] = fine_motions[curr_idx]
         
         # step 5: prepare update info
-        update_list: list[UpdateInfo] = []
+        update_list: list[MatchedStormPair] = []
 
         for curr_idx, info in inherited.items():
             parent_idx = info['parent']
             is_split = info['is_split']
             merged_list = info['merged_list']
             velocity = info['fine_motion']
+            displacement = velocity * dt
 
             if parent_idx is None:
                 # new storm
-                update_list.append(UpdateInfo(
+                update_list.append(MatchedStormPair(
                     prev_storm_order=-1,
                     curr_storm_order=curr_idx,
                     update_type=UpdateType.NEW
@@ -242,27 +245,28 @@ class StormMatcher(BaseMatcher):
             
             if is_split:
                 # splitted storm
-                update_list.append(UpdateInfo(
+                update_list.append(MatchedStormPair(
                     prev_storm_order=parent_idx,
                     curr_storm_order=curr_idx,
                     update_type=UpdateType.SPLITTED,
-                    velocity=velocity
+                    estimated_movement=displacement
                 ))
             else:
                 # matched storm
-                update_list.append(UpdateInfo(
+                update_list.append(MatchedStormPair(
                     prev_storm_order=parent_idx,
                     curr_storm_order=curr_idx,
                     update_type=UpdateType.MATCHED,
-                    velocity=velocity
+                    estimated_movement=displacement
                 ))
 
             ## update merged storms
             for merged_idx in merged_list:
-                update_list.append(UpdateInfo(
+                update_list.append(MatchedStormPair(
                     prev_storm_order=merged_idx,
                     curr_storm_order=curr_idx,
-                    update_type=UpdateType.MERGED
+                    update_type=UpdateType.MERGED,
+                    estimated_movement=displacement
                 ))
             
         return update_list

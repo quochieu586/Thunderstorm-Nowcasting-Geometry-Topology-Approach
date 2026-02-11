@@ -75,8 +75,8 @@ class SimpleMatcher(BaseMatcher):
                 curr_storm_order=curr_idx,
                 update_type=UpdateType.MATCHED,
                 estimated_movement=np.array([
-                    storm_map2.storms[curr_idx].centroid[1] - storm_map1.storms[prev_idx].centroid[1],
-                    storm_map2.storms[curr_idx].centroid[0] - storm_map1.storms[prev_idx].centroid[0]
+                    storm_map2.storms[curr_idx].centroid[0] - storm_map1.storms[prev_idx].centroid[0],
+                    storm_map2.storms[curr_idx].centroid[1] - storm_map1.storms[prev_idx].centroid[1]
                 ])
             ))
         
@@ -99,7 +99,9 @@ class SimpleMatcher(BaseMatcher):
             pred_storm = pred_storms_map.storms[prev_idx]
 
             # Find storms that the predicted centroid fall into.
-            candidates = [idx for idx, storm in enumerate(storm_map2.storms) if storm.contour.contains(Point(pred_storm.centroid))]
+            reversed_centroid = (pred_storm.centroid[1], pred_storm.centroid[0])    # (x, y) format for shapely
+            candidates = [idx for idx, storm in enumerate(storm_map2.storms) \
+                          if storm.contour.contains(Point(reversed_centroid))]
             
             # Case: more than 1 candidates => choose one with maximum overlapping on prev_storm
             if len(candidates) > 1:
@@ -113,8 +115,8 @@ class SimpleMatcher(BaseMatcher):
             curr_idx = candidates[0]
             mapping_prev[prev_idx] = [curr_idx]
             centroid_displacement = np.array([
-                storm_map2.storms[curr_idx].centroid[1] - storm_map1.storms[prev_idx].centroid[1],
-                storm_map2.storms[curr_idx].centroid[0] - storm_map1.storms[prev_idx].centroid[0]
+                storm_map2.storms[curr_idx].centroid[0] - storm_map1.storms[prev_idx].centroid[0],
+                storm_map2.storms[curr_idx].centroid[1] - storm_map1.storms[prev_idx].centroid[1]
             ])
             if curr_idx not in mapping_curr:
                 mapping_curr[curr_idx] = [prev_idx]
@@ -139,9 +141,10 @@ class SimpleMatcher(BaseMatcher):
                 continue
             curr_storm = storm_map2.storms[curr_idx]
             # Find predicted storms that the current centroid fall into.
+            reversed_centroid = (curr_storm.centroid[1], curr_storm.centroid[0])    # (x, y) format for shapely
             candidates = [
                     idx for idx, storm in enumerate(pred_storms_map.storms) \
-                        if storm.contour.contains(Point(curr_storm.centroid))
+                        if storm.contour.contains(Point(reversed_centroid))
                 ]
             
             if len(candidates) == 0:
@@ -161,8 +164,8 @@ class SimpleMatcher(BaseMatcher):
             prev_idx = candidates[0]
             mapping_curr[curr_idx] = [prev_idx]
             centroid_displacement = np.array([
-                storm_map2.storms[curr_idx].centroid[1] - storm_map1.storms[prev_idx].centroid[1],
-                storm_map2.storms[curr_idx].centroid[0] - storm_map1.storms[prev_idx].centroid[0]
+                storm_map2.storms[curr_idx].centroid[0] - storm_map1.storms[prev_idx].centroid[0],
+                storm_map2.storms[curr_idx].centroid[1] - storm_map1.storms[prev_idx].centroid[1]
             ])
             if prev_idx not in mapping_prev:
                 mapping_prev[prev_idx] = [curr_idx]
@@ -180,6 +183,55 @@ class SimpleMatcher(BaseMatcher):
                     update_type=UpdateType.SPLITTED,
                     estimated_movement=centroid_displacement
                 ))
+        
+        # fix split & merge motion estimation
+        for prev_idx, curr_indices in mapping_prev.items():
+            if len(curr_indices) <= 1:
+                continue
+            
+            # compute area weights => weighted average
+            area_list = [storm_map2.storms[curr_idx].contour.area for curr_idx in curr_indices]
+            total_area = sum(area_list)
+            area_weights = [area / total_area for area in area_list]
+
+            # get motion assignments
+            assignment_indices = [idx for idx, assign in enumerate(assignments) \
+                                  if assign.prev_storm_order == prev_idx]
+            movement_list = [assignments[idx].estimated_movement for idx in assignment_indices]
+
+            # combined motion
+            combined_motion = sum([
+                movement_list[i] * area_weights[i]
+                for i in range(len(curr_indices))
+            ])
+            
+            # update all motions
+            for idx in assignment_indices:
+                assignments[idx].estimated_movement = combined_motion
+
+        for curr_idx, prev_indices in mapping_curr.items():
+            if len(prev_indices) <= 1:
+                continue
+            
+            # compute area weights => weighted average
+            area_list = [storm_map1.storms[prev_idx].contour.area for prev_idx in prev_indices]
+            total_area = sum(area_list)
+            area_weights = [area / total_area for area in area_list]
+
+            # get motion assignments
+            assignment_indices = [idx for idx, assign in enumerate(assignments) \
+                                  if assign.curr_storm_order == curr_idx]
+            movement_list = [assignments[idx].estimated_movement for idx in assignment_indices]
+
+            # combined motion
+            combined_motion = sum([
+                movement_list[i] * area_weights[i]
+                for i in range(len(prev_indices))
+            ])
+            
+            # update all motions
+            for idx in assignment_indices:
+                assignments[idx].estimated_movement = combined_motion
 
         # Sort to ensure MATCHED are processed first
         assignments.sort(key=lambda x: x.update_type.value)
