@@ -1,9 +1,12 @@
+import cv2
+import numpy as np
+
 from scipy.fft import fft2, ifft2, fftshift
 from scipy.ndimage import gaussian_filter
 
 from src.cores.base import StormsMap
+from src.preprocessing import convert_polygons_to_contours
 
-import numpy as np
 
 class FFTMovement:
     max_velocity: float
@@ -12,6 +15,14 @@ class FFTMovement:
         super().__init__()
         self.max_velocity = max_velocity
         self.smooth_sigma = smooth_sigma
+    
+    def _get_binary_map(self, storm_map: StormsMap) -> np.ndarray:
+        storms = storm_map.storms
+        binary_map = np.zeros_like(storm_map.dbz_map, dtype=np.uint8)
+        for storm in storms:
+            contour = convert_polygons_to_contours([storm.contour])[0]
+            cv2.fillPoly(binary_map, [contour], color=1)
+        return binary_map
 
     def estimate_movement(self, prev_map: StormsMap, curr_map: StormsMap):
         H, W = prev_map.dbz_map.shape
@@ -21,6 +32,9 @@ class FFTMovement:
 
         max_displacement = self.max_velocity * dt
         buffer = int(max_displacement)
+
+        prev_binary_map = self._get_binary_map(prev_map)
+        curr_binary_map = self._get_binary_map(curr_map)
 
         movement_list = []
         region_list = []
@@ -46,12 +60,8 @@ class FFTMovement:
             min_y = int(max(min_y - buffer, 0))
             max_y = int(min(max_y + buffer, H))
 
-            prev_region = prev_map.dbz_map[min_y:max_y, min_x:max_x]
-            curr_region = curr_map.dbz_map[min_y:max_y, min_x:max_x]
-
-            # ---- normalize (mean removal as in paper) ----
-            prev_region = prev_region - np.mean(prev_region)
-            curr_region = curr_region - np.mean(curr_region)
+            prev_region = prev_binary_map[min_y:max_y, min_x:max_x]
+            curr_region = curr_binary_map[min_y:max_y, min_x:max_x]
 
             # ---- FFT cross-covariance (Leese et al.) ----
             F1 = fft2(prev_region)
@@ -69,7 +79,7 @@ class FFTMovement:
             peak_y, peak_x = np.unravel_index(
                 np.argmax(Cov_smooth), Cov_smooth.shape
             )
-
+            
             center_y = Cov_smooth.shape[0] // 2
             center_x = Cov_smooth.shape[1] // 2
 

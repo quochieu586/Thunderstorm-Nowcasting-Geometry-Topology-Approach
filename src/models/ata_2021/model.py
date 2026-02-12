@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from src.cores.base import StormsMap, StormObject
 from src.identification import SimpleContourIdentifier
 from src.preprocessing import convert_contours_to_polygons, convert_polygons_to_contours
+from src.cores.movement_estimate.fft import FFTMovement
 
 from .matcher import Matcher
 from ..base.model import BasePrecipitationModel
@@ -25,13 +26,16 @@ class AdaptiveTrackingPrecipitationModel(BasePrecipitationModel):
     def __init__(
             self, 
             identifier: SimpleContourIdentifier, 
-            max_velocity: float = 100, 
-            max_velocity_diff: float = 100, 
-            max_cost: float = 50
+            max_velocity: float = 200, 
+            max_velocity_diff: float = 200, 
+            max_cost: float = 100,
+            fft: FFTMovement = None
         ):
         self.identifier = identifier
+        if fft is None:
+            fft = FFTMovement(max_velocity=max_velocity)
         self.matcher = Matcher(
-                max_velocity=max_velocity, max_velocity_diff=max_velocity_diff, max_cost=max_cost
+                fft=fft, max_velocity=max_velocity, max_velocity_diff=max_velocity_diff, max_cost=max_cost
             )
         self.tracker = None
         self.storms_maps = []

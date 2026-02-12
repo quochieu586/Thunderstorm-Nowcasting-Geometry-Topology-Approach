@@ -22,12 +22,14 @@ class STitanPrecipitationModel(BasePrecipitationModel):
     storms_maps: list[StormsMap]
     tracker: TrackingHistory
     matcher: STitanMatcher
+    max_velocity: float
 
-    def __init__(self, identifier: MorphContourIdentifier, trec: BaseTREC = None):
+    def __init__(self, identifier: MorphContourIdentifier, trec: BaseTREC = None, max_velocity: float = 100.0):
         self.identifier = identifier
+        self.max_velocity = max_velocity
         self.storms_maps = []
         if trec is None:
-            trec = TREC()
+            trec = TREC(max_velocity=max_velocity)
 
         self.matcher = STitanMatcher(trec=trec)
         self.tracker = None
