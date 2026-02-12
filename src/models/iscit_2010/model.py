@@ -8,7 +8,7 @@ from src.identification import MorphContourIdentifier
 from src.preprocessing import convert_contours_to_polygons, convert_polygons_to_contours
 from src.cores.movement_estimate import BaseTREC, TREC
 
-from .matcher import STitanMatcher, MatchedStormPair
+from .matcher import ISCITMatcher, MatchedStormPair
 from ..base.tracker import TrackingHistory, UpdateType
 from .storm import ParticleStorm
 
@@ -21,7 +21,7 @@ class ISCITPrecipitationModel(BasePrecipitationModel):
     identifier: MorphContourIdentifier
     storms_maps: list[StormsMap]
     tracker: TrackingHistory
-    matcher: STitanMatcher
+    matcher: ISCITMatcher
 
     def __init__(self, identifier: MorphContourIdentifier, trec: BaseTREC = None, 
                  max_velocity: float = 100.0, weights: tuple[float, float] = (0.5, 0.5)):
@@ -30,7 +30,7 @@ class ISCITPrecipitationModel(BasePrecipitationModel):
         if trec is None:
             trec = TREC(max_velocity=max_velocity)
 
-        self.matcher = STitanMatcher(trec=trec, max_velocity=max_velocity, weights=weights)
+        self.matcher = ISCITMatcher(trec=trec, max_velocity=max_velocity, weights=weights)
         self.tracker = None
 
     def identify_storms(

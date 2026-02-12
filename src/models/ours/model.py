@@ -13,6 +13,7 @@ from src.cores.polar_description_vector import fft_conv2d, construct_polar_kerne
 
 from .matcher import StormMatcher
 from .storm import DbzStormsMap, ShapeVectorStorm
+from ..base.tracker import MatchedStormPair
 
 from .default import DEFAULT_MAX_VELOCITY, DEFAULT_WEIGHTS, DEFAULT_COARSE_MATCHING_THRESHOLD, DEFAULT_FINE_MATCHING_THRESHOLD, DEFAULT_DENSITY, DEFAULT_NUM_SECTORS, DEFAULT_RADII
 
@@ -62,7 +63,9 @@ class OursPrecipitationModel(BasePrecipitationModel):
         
     #     return DbzStormsMap(storms, time_frame=time_frame, dbz_map=dbz_img)
     
-    def identify_storms(self, dbz_img: np.ndarray, time_frame: datetime, map_id: str, threshold: int, filter_area: float) -> StormsMap:
+    def identify_storms(
+            self, dbz_img: np.ndarray, time_frame: datetime, map_id: str, threshold: int, filter_area: float
+        ) -> DbzStormsMap:
         contours = self.identifier.identify_storm(dbz_img, threshold=threshold, filter_area=filter_area)
         polygons = convert_contours_to_polygons(contours)
         polygons = sorted(polygons, key=lambda x: x.area, reverse=True)
@@ -84,9 +87,11 @@ class OursPrecipitationModel(BasePrecipitationModel):
     def processing_map(self, curr_storms_map: StormsMap, coarse_threshold: float = DEFAULT_COARSE_MATCHING_THRESHOLD, fine_threshold: float = DEFAULT_FINE_MATCHING_THRESHOLD) -> int:
         if len(self.storms_maps) == 0:
             self.tracker = TrackingHistory(curr_storms_map)
-            update_list = []
+            update_list: list[MatchedStormPair] = []
         else:
             prev_storms_map = self.storms_maps[-1]
+            dt = (curr_storms_map.time_frame - prev_storms_map.time_frame).total_seconds() / 3600  # scaled to hour
+
             if curr_storms_map.time_frame <= prev_storms_map.time_frame:
                 raise ValueError("Current storms map time frame must be later than the previous one.")
             
@@ -109,7 +114,7 @@ class OursPrecipitationModel(BasePrecipitationModel):
                         curr_storm=curr_storms_map.storms[info.curr_storm_order],
                         update_type=info.update_type,
                         time_frame=curr_storms_map.time_frame,
-                        velocity=info.velocity
+                        velocity=info.derive_motion_vector(dt)
                     )
 
         self.storms_maps.append(curr_storms_map)

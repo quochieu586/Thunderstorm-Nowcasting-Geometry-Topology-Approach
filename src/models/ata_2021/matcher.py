@@ -172,8 +172,8 @@ class Matcher(BaseMatcher):
             for storm in storms_map_1.storms
         ], time_frame=storms_map_2.time_frame)
 
-        # for storm, shift in zip(pred_storms_map.storms, corrected_shifts):
-        #     storm.make_move(shift)
+        for storm, shift in zip(pred_storms_map.storms, corrected_shifts):
+            storm.make_move(shift)
 
         ## Check for merging
         for prev_idx in range(len(storms_map_1.storms)):
@@ -183,7 +183,9 @@ class Matcher(BaseMatcher):
             pred_storm = pred_storms_map.storms[prev_idx]
 
             # Find storms that the predicted centroid fall into.
-            candidates = [idx for idx, storm in enumerate(storms_map_2.storms) if storm.contour.contains(Point(pred_storm.centroid))]
+            reversed_centroid = (pred_storm.centroid[1], pred_storm.centroid[0])    # (x, y) format for shapely
+            candidates = [idx for idx, storm in enumerate(storms_map_2.storms) \
+                          if storm.contour.contains(Point(reversed_centroid))]
             
             # Case: more than 1 candidates => choose one with maximum overlapping on prev_storm
             if len(candidates) > 1:
@@ -222,7 +224,9 @@ class Matcher(BaseMatcher):
             curr_storm = storms_map_2.storms[curr_idx]
 
             # Find storms that the current centroid fall into.
-            candidates = [idx for idx, storm in enumerate(pred_storms_map.storms) if storm.contour.contains(Point(curr_storm.centroid))]
+            reversed_centroid = (curr_storm.centroid[1], curr_storm.centroid[0])    # (x, y) format for shapely
+            candidates = [idx for idx, storm in enumerate(pred_storms_map.storms) \
+                          if storm.contour.contains(Point(reversed_centroid))]
             
             # Case: more than 1 candidates => choose one with maximum overlapping on curr_storm
             if len(candidates) > 1:

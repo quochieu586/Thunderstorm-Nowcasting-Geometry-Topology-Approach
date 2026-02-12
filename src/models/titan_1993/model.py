@@ -51,13 +51,13 @@ class TitanPrecipitationModel(BasePrecipitationModel):
             else:
                 cx = (x_idx * weights).sum() / total_weight
                 cy = (y_idx * weights).sum() / total_weight
-                centroid = (int(cx), int(cy))
+                centroid = (int(cy), int(cx))
 
             storms.append(StormObject(
                 polygon, centroid=centroid, id=f"{map_id}_storm_{idx}"
             ))
         
-        return StormsMap(storms=storms, time_frame=time_frame)
+        return StormsMap(storms=storms, time_frame=time_frame, dbz_map=dbz_img)
 
     def processing_map(self, curr_storms_map: StormsMap) -> int:
         if self.storms_maps == []:

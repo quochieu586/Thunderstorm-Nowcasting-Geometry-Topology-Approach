@@ -9,7 +9,7 @@ from .storm import ParticleStorm
 from .particle_matcher import ParticleMatcher, Particle
 from .subset import SubsetResolver, CellSubset
 
-class STitanMatcher:
+class ISCITMatcher:
     trec: TREC
 
     def __init__(
