@@ -64,3 +64,29 @@ We also provide Jupyter Notebooks for step-by-step execution, evaluating models 
 
 * `experimental_notebooks/` directory: For experimental analysis and isolated testing of specific modules like image preprocessing or storm identification.
 * `model_evaluation.ipynb`: To execute the evaluation pipeline and generate quantitative scores.
+
+### Storm Track Visualization
+
+<table>
+  <tr>
+    <td align="center" width="50%"><b>STITAN (2008)</b><br>
+      <img src="animation/tracks/animated_KARX_STITAN.svg" width="100%">
+    </td>
+    <td align="center" width="50%"><b>ETITAN (2009)</b><br>
+      <img src="animation/tracks/animated_KARX_ETITAN.svg" width="100%">
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%"><b>ISCIT (2010)</b><br>
+      <img src="animation/tracks/animated_KARX_ISCIT.svg" width="100%">
+    </td>
+    <td align="center" width="50%"><b>ATA (2021)</b><br>
+      <img src="animation/tracks/animated_KARX_ATA.svg" width="100%">
+    </td>
+  </tr>
+  <tr>
+    <td align="center" colspan="2"><b>Our Approach (Particle-Based with Shape Vector)</b><br>
+      <img src="animation/tracks/animated_KARX_OURS.svg" width="50%">
+    </td>
+  </tr>
+</table>
