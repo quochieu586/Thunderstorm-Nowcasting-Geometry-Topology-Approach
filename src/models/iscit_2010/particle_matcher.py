@@ -48,7 +48,7 @@ class ParticleMatcher(BaseMatcher):
         # compute cost matrix
         cost_matrix = weights[0] * T_D + weights[1] * T_S
 
-        return cost_matrix, T_D, T_S
+        return cost_matrix, T_D, T_S, displacement_matrix
     
     def match_particles(
             self, particle_lst1: list[Particle], particle_lst2: list[Particle], estimated_vectors: np.ndarray, 
@@ -62,10 +62,10 @@ class ParticleMatcher(BaseMatcher):
             maximum_displacement (float): The maximum displacement allowed for a particle to be considered a match.
             weights (list[float], default=[0.5, 0.5]): the list of nonnegative- and sum-to-1 weights.
         Returns:
-            assignments (np.ndarray): The array of matched indices between the 2 lists of particles.
+assignments (np.ndarray): The array of matched indices between the 2 lists of particles.
         """
         # print(f"ParticleMatcher weights: {weights}")
-        cost_matrix, T_D, T_S = self._construct_disparity_matrix(
+        cost_matrix, T_D, T_S, displacement_matrix = self._construct_disparity_matrix(
             particle_lst1, particle_lst2, estimated_vectors=estimated_vectors, 
             max_displacement=maximum_displacement, weights=weights
         )

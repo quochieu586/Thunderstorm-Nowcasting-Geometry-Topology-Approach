@@ -9,7 +9,7 @@ from src.preprocessing import convert_contours_to_polygons
 from src.models.base.model import BasePrecipitationModel
 from src.models.base.tracker import TrackingHistory, UpdateType
 
-from src.cores.polar_description_vector import fft_conv2d, construct_polar_kernels
+from src.cores.polar_description_vector import fft_conv2d, construct_polar_kernels, construct_polar_kernels_gaussian
 
 from .matcher import StormMatcher
 from .storm import DbzStormsMap, ShapeVectorStorm
@@ -30,10 +30,11 @@ class OursPrecipitationModel(BasePrecipitationModel):
     storms_maps: list[StormsMap]
 
     def __init__(self, identifier: HypothesisIdentifier, max_velocity: float = DEFAULT_MAX_VELOCITY, weights: tuple[float, float] = DEFAULT_WEIGHTS,
-                 radii: list[int] = DEFAULT_RADII, num_sectors: int = DEFAULT_NUM_SECTORS, density: float = DEFAULT_DENSITY):
+                 radii: list[int] = DEFAULT_RADII, num_sectors: int = DEFAULT_NUM_SECTORS, density: float = DEFAULT_DENSITY,
+                 velocity_estimate_weights: tuple[float, float] = (0.5, 0.5)):
         self.identifier = identifier
         self.storms_maps = []
-        self.matcher = StormMatcher(max_velocity=max_velocity, weights=weights)
+        self.matcher = StormMatcher(max_velocity=max_velocity, weights=weights, velocity_estimate_weights=velocity_estimate_weights)
         self.tracker = None
 
         self.radii = radii
@@ -41,27 +42,7 @@ class OursPrecipitationModel(BasePrecipitationModel):
         self.density = density
 
         self.kernels = construct_polar_kernels(radii, num_sectors)
-
-    # def identify_storms(self, dbz_img: np.ndarray, time_frame: datetime, map_id: str, 
-    #                     threshold: int, filter_area: float, show_progress: bool = True) -> StormsMap:
-    #     contours = self.identifier.identify_storm(dbz_img, threshold=threshold, filter_area=filter_area)
-    #     polygons = convert_contours_to_polygons(contours)
-    #     polygons = sorted(polygons, key=lambda x: x.area, reverse=True)
-
-    #     pbar = tqdm(enumerate(polygons), total=len(polygons), desc="Constructing ShapeVectorStorms", leave=False) \
-    #         if show_progress else enumerate(polygons)
-
-    #     # Construct storms map
-    #     storms = [ShapeVectorStorm(
-    #                 polygon=polygon, 
-    #                 id=f"{map_id}_storm_{idx}",
-    #                 dbz_map=dbz_img,
-    #                 density=self.density,
-    #                 radii=self.radii,
-    #                 num_sectors=self.num_sectors
-    #             ) for idx, polygon in pbar]
-        
-    #     return DbzStormsMap(storms, time_frame=time_frame, dbz_map=dbz_img)
+        # self.kernels = construct_polar_kernels_gaussian(radii, num_sectors, sigma_scale=0.5)
     
     def identify_storms(
             self, dbz_img: np.ndarray, time_frame: datetime, map_id: str, threshold: int, filter_area: float
@@ -71,7 +52,18 @@ class OursPrecipitationModel(BasePrecipitationModel):
         polygons = sorted(polygons, key=lambda x: x.area, reverse=True)
 
         # Pre-compute the convolution of the dbz map with all sector kernels
-        img = from_numpy(dbz_img >= threshold).float().unsqueeze(0).unsqueeze(0)  # Shape: (1, 1, H, W)
+        img = from_numpy(dbz_img >= threshold).float().unsqueeze(0).unsqueeze(0)   # Shape: (1, 1, H, W)
+        
+        # img = from_numpy(dbz_img / 35).float().unsqueeze(0).unsqueeze(0)   # Shape: (1, 1, H, W)
+
+        # TEST: use f(u,v) = u**2+v**2 instead of the binary mask to see if the convolution works as expected
+        # img = np.zeros_like(dbz_img)  # Create an empty image with the same shape as dbz_img
+        # img = np.arange(img.shape[0])[:, None]**2 + np.arange(img.shape[1])[None, :]**2
+        # img = from_numpy(np.where(dbz_img >= threshold, img, 0)).float().unsqueeze(0).unsqueeze(0)
+
+        # TEST: use f = dBZ value
+        # img = from_numpy(dbz_img).float().unsqueeze(0).unsqueeze(0) 
+
         sectors_convolved_np = fft_conv2d(img=img, kernel=from_numpy(self.kernels).unsqueeze(1).float())
 
         storms = [ShapeVectorStorm(

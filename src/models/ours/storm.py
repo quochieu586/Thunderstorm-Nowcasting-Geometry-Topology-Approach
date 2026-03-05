@@ -179,8 +179,8 @@ class DbzStormsMap(StormsMap):
         return np.unravel_index(np.argmax(result), result.shape)
     
     def estimate_motion_vector_backtrack(
-            self, prev_storms_map: "DbzStormsMap", 
-            particles_estimated_movement: list[np.ndarray], **kwargs
+            self, prev_storms_map: "DbzStormsMap", particles_estimated_movement: list[np.ndarray], 
+            max_velocity: float, velocity_estimate_weights: tuple[float, float]
         ) -> list[np.ndarray]:
         """
         Estimate motion vector for each storm based on estimated movement from matched particles.
@@ -195,7 +195,6 @@ class DbzStormsMap(StormsMap):
             motion_vectors (list[np.ndarray]): list of estimated motion vectors for each storm.
         """
         H, W = self.dbz_map.shape
-        max_velocity = kwargs.get("max_velocity", 100)
         dt = (self.time_frame - prev_storms_map.time_frame).total_seconds() / 3600.0    # in hr
         buffer = int(max_velocity * dt / 2)         # buffer = half of max_velocity * dt (in pixels)
 
@@ -225,8 +224,8 @@ class DbzStormsMap(StormsMap):
             trec_dx = min_x - (smin_x + block_dx)
 
             # combine coarse and fine movements
-            fine_dy = (trec_dy + dy) / 2.0
-            fine_dx = (trec_dx + dx) / 2.0
+            fine_dx = velocity_estimate_weights[0] * trec_dx + velocity_estimate_weights[1] * dx
+            fine_dy = velocity_estimate_weights[0] * trec_dy + velocity_estimate_weights[1] * dy
 
             motion_vectors.append(np.array([fine_dy, fine_dx], dtype=np.float32) / dt)   # in pixels per hour
         
