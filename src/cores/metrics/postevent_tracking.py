@@ -1,7 +1,7 @@
 import numpy as np
 from sklearn.linear_model import TheilSenRegressor
 from typing import Annotated
-from tqdm.notebook import tqdm
+from tqdm import tqdm
 
 class TrackCluster:
     def __init__(self, id: int):

@@ -36,9 +36,9 @@ class ETitanPrecipitationModel(BasePrecipitationModel):
         """
         Dynamic constraint for maximum velocity based on storm area. The unit of velocity is pixel/hr.
         """
-        if area < 1200:
+        if area < 300:
             return self.max_velocity
-        elif area < 2000:
+        elif area < 500:
             return self.max_velocity * 1.5
         else:
             return self.max_velocity * 2

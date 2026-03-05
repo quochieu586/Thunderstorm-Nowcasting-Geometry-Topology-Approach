@@ -93,7 +93,8 @@ class ISCITMatcher:
         assignments_A = reduced_soft_hungarian(1 - p_A)
         assignments_B = reduced_soft_hungarian(1 - p_B)
         ## temporary version
-        temp_assignments = list(set(assignments_A).union(set(assignments_B)))
+        temp_assignments = [(i, j) for i, j in list(set(assignments_A).union(set(assignments_B))) \
+                            if (p_A[i, j] >= 0.1) and (p_B[i, j] >= 0.1)]
 
         ## justified version
         subsets = self.subset_resolver.create_subsets(temp_assignments)
@@ -111,5 +112,19 @@ class ISCITMatcher:
                     self.max_velocity, self.weights
                 )
             )
+
+        # update for unmatched storms in the current frame
+        curr_mapping = {curr_idx: False for curr_idx in range(len(storms_map_2.storms))}
+        for match in final_assignments:
+            curr_mapping[match.curr_storm_order] = True
+        
+        for curr_idx, mapped in curr_mapping.items():
+            if not mapped:
+                final_assignments.append(MatchedStormPair(
+                    prev_storm_order=None,
+                    curr_storm_order=curr_idx,
+                    update_type=UpdateType.NEW,
+                    estimated_movement=np.array([0.0, 0.0])
+                ))
 
         return final_assignments

@@ -55,12 +55,14 @@ class StormMatcher(BaseMatcher):
     max_velocity: float
     particle_matcher: ParticleMatcher
     weights: tuple[float, float]
+    velocity_estimate_weights: tuple[float, float]
 
-    def __init__(self, max_velocity: float, weights: tuple[float, float]):
+    def __init__(self, max_velocity: float, weights: tuple[float, float], velocity_estimate_weights: tuple[float, float]):
         self.max_velocity = max_velocity
         self.weights = weights
         self.particle_matcher = ParticleMatcher()
-    
+        self.velocity_estimate_weights = velocity_estimate_weights
+
     def _construct_disparity_matrix(self, object_lst1, object_lst2):
         pass
 
@@ -218,8 +220,10 @@ class StormMatcher(BaseMatcher):
         
         # step 4: justify the motion vectors using TREC-based method
         coarse_displacements = [inherited[curr_idx]['coarse_displacement'] for curr_idx in range(len(storms_map_lst_2.storms))]
-        fine_motions = storms_map_lst_2.estimate_motion_vector_backtrack(storms_map_lst_1, coarse_displacements, 
-                                                               max_velocity=self.max_velocity)
+        fine_motions = storms_map_lst_2.estimate_motion_vector_backtrack(
+            storms_map_lst_1, coarse_displacements,
+            max_velocity=self.max_velocity, velocity_estimate_weights=self.velocity_estimate_weights
+        )
 
         for curr_idx in range(len(storms_map_lst_2.storms)):
             inherited[curr_idx]['fine_motion'] = fine_motions[curr_idx]

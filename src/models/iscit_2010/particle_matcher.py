@@ -69,9 +69,7 @@ assignments (np.ndarray): The array of matched indices between the 2 lists of pa
             particle_lst1, particle_lst2, estimated_vectors=estimated_vectors, 
             max_displacement=maximum_displacement, weights=weights
         )
-        # invalid_mask = ((T_D >= 1) & (T_S >= 1)) | (displacement_matrix > maximum_displacement).all(axis=-1)       # shape: (n1, n2)
-        invalid_mask = ((T_D >= 1) & (T_S >= 1))
-        # invalid_mask = ((T_D >= 1) | (T_S >= 1))
+        invalid_mask = (T_D > 1) | (T_S >= 1)      # violate either condition => invalid match
         
         row_ind, col_ind = self._hungarian_matching(cost_matrix)
         assignment_mask = np.zeros_like(invalid_mask, dtype=bool)

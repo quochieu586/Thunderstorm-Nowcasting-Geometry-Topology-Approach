@@ -27,6 +27,64 @@ def construct_polar_kernels(radii: list[int], num_sectors: int) -> np.ndarray:
 
     return np.array(kernels_lst)
 
+def construct_polar_kernels_gaussian(radii: list[int], num_sectors: int, sigma_scale: float = 0.5) -> np.ndarray:
+    """
+    Construct list of Gaussian filters corresponding to each polar sector.
+    
+    Args:
+        radii: List of boundary radii.
+        num_sectors: Number of angular sectors.
+        sigma_scale: Controls the 'softness' of the edges. 
+                     0.5 means 1 standard deviation equals half the sector width.
+                     Increase for more overlap/blur, decrease for sharper edges.
+    """
+    max_radii = radii[-1]
+    origin_y, origin_x = max_radii, max_radii
+    
+    # 1. Create a 2D Cartesian coordinate grid
+    y, x = np.indices((max_radii * 2, max_radii * 2))
+    dy = y - origin_y
+    dx = x - origin_x
+    
+    # 2. Convert grid to Polar Coordinates
+    R = np.sqrt(dx**2 + dy**2)
+    # np.arctan2 returns [-pi, pi], convert to [0, 360) degrees
+    Theta = np.degrees(np.arctan2(dy, dx)) % 360.0
+    
+    delta_theta = 360.0 / num_sectors
+    sigma_theta = delta_theta * sigma_scale
+    
+    kernels_lst = []
+    prev_r = 0
+    
+    for r in radii:
+        delta_r = r - prev_r
+        # Find the mathematical center of the current radius bin
+        center_r = prev_r + delta_r / 2.0
+        sigma_r = delta_r * sigma_scale
+        
+        for s_idx in range(num_sectors):
+            # Find the mathematical center of the current angle bin
+            center_theta = (s_idx * delta_theta + delta_theta / 2.0) % 360.0
+            
+            # Calculate shortest angular distance (handles the 360 -> 0 degree wrap-around boundary)
+            d_theta = np.abs(Theta - center_theta)
+            d_theta = np.minimum(d_theta, 360.0 - d_theta)
+            
+            # 3. Calculate the 2D Polar Gaussian
+            gaussian = np.exp(-0.5 * ((R - center_r) / sigma_r)**2 
+                              -0.5 * (d_theta / sigma_theta)**2)
+            
+            # Optional: Hard-cutoff anything strictly outside the maximum radius 
+            # to keep the footprint exactly identical to the original image bounds.
+            gaussian[R > max_radii] = 0.0
+            
+            kernels_lst.append(gaussian)
+            
+        prev_r = r
+
+    return np.array(kernels_lst)
+
 def fft_conv2d(img, kernel):
     """
     Performs 2D convolution via FFT to avoid 'im2col' memory explosion 

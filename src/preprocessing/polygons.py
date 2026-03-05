@@ -13,6 +13,9 @@ def convert_contours_to_polygons(contours: list[Union[np.ndarray, list[np.ndarra
     
     polygons = []
     for contour in contours:
+        if len(contour) <= 3:
+            continue  # A polygon cannot have less than 3 points
+        
         polygon = Polygon(contour.squeeze(axis=1))
         if not polygon.is_valid:
             polygon = polygon.buffer(0)
