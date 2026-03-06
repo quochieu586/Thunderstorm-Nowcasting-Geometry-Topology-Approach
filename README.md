@@ -15,6 +15,8 @@ P. T. An<sup>[1,3,<span style="font-family: FontAwesome;">&#xf0e0;</span>]</sup>
 <sup>1</sup> Institute of Mathematical and Computational Sciences and Faculty of Applied Science, Ho Chi Minh City University of Technology, 268 Ly Thuong Kiet, Dien Hong Ward, Ho Chi Minh City, Vietnam  
 <sup>2</sup> Faculty of Computer Science and Engineering, Ho Chi Minh City University of Technology, 268 Ly Thuong Kiet, Dien Hong Ward, Ho Chi Minh City, Vietnam  
 <sup>3</sup> Vietnam National University Ho Chi Minh City, Linh Xuan Ward, Ho Chi Minh City, Vietnam  
+<sup><span style="font-family: FontAwesome;">&#xf0e0;</span></sup> Corresponding authors:
+Email addresses: trung.tranquoc2004@hcmut.edu.vn (T. Q. Trung), thanhan@hcmut.edu.vn (P. T. An)
 
 ---
 
