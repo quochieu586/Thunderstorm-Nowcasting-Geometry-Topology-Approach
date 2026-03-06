@@ -1,10 +1,10 @@
-# Particle-Based Thunderstorm Tracking with Shape Vector Descriptors for Robust Nowcasting
+# Particle-based Thunderstorm Tracking with Integral-based Shape Vector Descriptors for Robust Nowcasting
 
 ### Authors
 
 <div style="text-align: center;">
 T. Q. Hieu<sup>[2,3]</sup>,  
-T. Q. Trung<sup>[2,3]</sup>,  
+T. Q. Trung<sup>[2,3,<span style="font-family: FontAwesome;">&#xf0e0;</span>]</sup>,  
 T. V. Hoai<sup>[1,2,3]</sup>,  
 N. A. Khoa<sup>[2,3]</sup>,  
 P. T. An<sup>[1,3,<span style="font-family: FontAwesome;">&#xf0e0;</span>]</sup>
@@ -31,7 +31,7 @@ The radar data analyzed in this research is retrieved from the Next Generation W
 * **Preprocessing Toolkit:** The raw radar data is processed using The Python ARM Radar Toolkit (Py-ART). This library reads the NEXRAD archive files, maps the raw polar coordinate data to a uniform three-dimensional Cartesian grid, and generates the final 2D composite reflectivity fields by extracting the maximum reflectivity value throughout the vertical column.
 
 ### Methodology Pipeline
-Our framework builds upon the traditional Identification-Tracking-Nowcasting pipeline utilizing a novel particle-based approach:
+Our framework builds upon the traditional Thunderstorm Identification, Tracking, and Nowcasting (TITAN) pipeline utilizing a novel particle-based approach:
 
 1. **Identification Stage:**
    - **Storm Detection:** Extracts contiguous storm cells from the reflectivity map using a morphology-based identification method to effectively separate falsely merged cells and storm clusters.
@@ -59,13 +59,32 @@ To make sure the code runs with a compatible version of packages, you need to do
 ```bash
 pip install -r requirements.txt`
 ```
-##### Model Evaluation and Experiments
+
+#### Running evaluation pipeline
+
+To run the full evaluation pipeline from the project root, install dependencies and then run the main script. Example:
+
+```bash
+python main.py --dataset KARX --model ours --max-velocity 100 --identification-method morphology
+```
+
+Command-line arguments
+
+- `--dataset` (str, default: `KARX`): the dataset folder under `data/numpy_grid/` containing the .npy radar frames to evaluate. Example values: `KARX`, `KDVN`, `KGRR` (use the folder name present in `data/numpy_grid/`).
+
+- `--model` (str, default: `ours`): the nowcasting/tracking model to run. Examples include the repository's implementations such as `ours` (PTT-ISVD), and benchmark algorithms referenced in this work (e.g. `stitan`, `etitan`, `iscit`, `ata`, `titan`) — use the exact model key supported by `utils.evaluation_models.create_model`.
+
+- `--max-velocity` (int, default: `100`): maximum allowed velocity (in km/h) used by the motion estimation and association routines. Increase or decrease this to control how far objects are allowed to move between frames.
+
+- `--identification-method` (str, default: `morphology`): object identification strategy used to detect storms in each frame. Supported options in the codebase: `simple`, `morphology`, `hypothesis`, `cluster`. Their detailed descriptions can be found in the paper.
+
+#### Experiments with Interactive Notebooks
 We also provide Jupyter Notebooks for step-by-step execution, evaluating models against benchmark algorithms (using POD, FAR, and CSI metrics):
 
 * `experimental_notebooks/` directory: For experimental analysis and isolated testing of specific modules like image preprocessing or storm identification.
 * `model_evaluation.ipynb`: To execute the evaluation pipeline and generate quantitative scores.
 
-### Storm Track Visualization
+### Example Visualizations
 
 <table>
   <tr>
@@ -85,7 +104,7 @@ We also provide Jupyter Notebooks for step-by-step execution, evaluating models 
     </td>
   </tr>
   <tr>
-    <td align="center" colspan="2"><b>Our Approach (Particle-Based with Shape Vector)</b><br>
+    <td align="center" colspan="2"><b>PTT-ISVD (our)</b><br>
       <img src="animation/tracks/animated_KARX_OURS.svg" width="50%">
     </td>
   </tr>
