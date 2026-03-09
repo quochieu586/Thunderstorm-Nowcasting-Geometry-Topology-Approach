@@ -21,7 +21,7 @@ from src.preprocessing import read_image, windy_preprocessing_pipeline, convert_
 from src.cores.base import StormsMap, StormObject
 from src.identification import BaseStormIdentifier
 
-from src.models import BasePrecipitationModel, SimplePrecipitationModel
+from src.models import BasePrecipitationModel
 
 from app.config.source_config import IDENTIFICATION_METHODS, PRECIPITATION_MODELS
 from app.config.app_config import BaseAppConfig

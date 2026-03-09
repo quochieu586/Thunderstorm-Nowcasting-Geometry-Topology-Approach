@@ -5,7 +5,7 @@ from src.identification import (
 )
 
 from src.models import (
-    BasePrecipitationModel, SimplePrecipitationModel, ETitanPrecipitationModel, 
+    BasePrecipitationModel, ETitanPrecipitationModel,
     TitanPrecipitationModel, OursPrecipitationModel, AdaptiveTrackingPrecipitationModel
 )
 
@@ -22,7 +22,6 @@ IDENTIFICATION_METHODS: dict[str, BaseStormIdentifier] = {
 }
 
 PRECIPITATION_MODELS: dict[str, BasePrecipitationModel] = {
-    "Simple Precipitation Model": SimplePrecipitationModel(SimpleContourIdentifier()),
     "ETitan Precipitation Model": ETitanPrecipitationModel(MorphContourIdentifier(n_thresh=3, center_filter=10)),
     "Titan Precipitation Model": TitanPrecipitationModel(SimpleContourIdentifier()),
     "Ours Precipitation Model": OursPrecipitationModel(HypothesisIdentifier(distance_dbz_threshold=5, filter_center=10)),
