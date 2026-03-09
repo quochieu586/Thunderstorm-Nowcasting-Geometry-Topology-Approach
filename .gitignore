@@ -9,5 +9,6 @@ output/
 
 # DS store files
 .DS_Store
+.env
 
 subtle_tasks_notebooks/
