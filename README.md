@@ -62,6 +62,14 @@ To make sure the code runs with a compatible version of packages, you need to do
 pip install -r requirements.txt`
 ```
 
+#### Prepare dataset
+```bash
+python dataset.py
+```
+This script will:
+1. Download NEXRAD Level-II radar data from AWS for the specified events (KDVN, KGRR, KARX)
+2. Process the raw radar data into 2D composite reflectivity grids
+3. Save the processed numpy arrays to `data/numpy_grid/` directory
 #### Running evaluation pipeline
 
 To run the full evaluation pipeline from the project root, install dependencies and then run the main script. Example:

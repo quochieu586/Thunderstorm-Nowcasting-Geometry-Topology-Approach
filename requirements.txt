@@ -1,4 +1,5 @@
 accelerate==1.8.1
+arm-pyart==2.2.0
 aiohappyeyeballs==2.6.1
 aiohttp==3.12.13
 aiosignal==1.4.0
@@ -93,6 +94,7 @@ mypy_extensions==1.1.0
 narwhals==2.12.0
 nest-asyncio==1.6.0
 networkx==3.5
+nexradaws[pyart]==2.0.0
 numpy==2.3.1
 openai==1.93.0
 orjson==3.10.18
