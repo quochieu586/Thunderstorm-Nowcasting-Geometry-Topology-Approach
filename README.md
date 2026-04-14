@@ -5,7 +5,7 @@
 <div style="text-align: center;">
 T. Q. Hieu<sup>[2,3]</sup>,  
 T. Q. Trung<sup>[2,3,<span style="font-family: FontAwesome;">&#xf0e0;</span>]</sup>,  
-T. V. Hoai<sup>[1,2,3]</sup>,  
+T. V. Hoai<sup>[2,3]</sup>,  
 N. A. Khoa<sup>[2,3]</sup>,  
 P. T. An<sup>[1,3,<span style="font-family: FontAwesome;">&#xf0e0;</span>]</sup>
 </div>
