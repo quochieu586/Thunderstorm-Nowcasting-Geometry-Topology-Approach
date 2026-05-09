@@ -31,10 +31,12 @@ class OursPrecipitationModel(BasePrecipitationModel):
 
     def __init__(self, identifier: HypothesisIdentifier, max_velocity: float = DEFAULT_MAX_VELOCITY, weights: tuple[float, float] = DEFAULT_WEIGHTS,
                  radii: list[int] = DEFAULT_RADII, num_sectors: int = DEFAULT_NUM_SECTORS, density: float = DEFAULT_DENSITY,
-                 velocity_estimate_weights: tuple[float, float] = (0.5, 0.5)):
+                 velocity_estimate_weights: tuple[float, float] = (0.5, 0.5), particle_matching_method: str = 'linear'):
         self.identifier = identifier
         self.storms_maps = []
-        self.matcher = StormMatcher(max_velocity=max_velocity, weights=weights, velocity_estimate_weights=velocity_estimate_weights)
+        self.matcher = StormMatcher(max_velocity=max_velocity, weights=weights, 
+                                    velocity_estimate_weights=velocity_estimate_weights,
+                                    particle_matching_method=particle_matching_method)
         self.tracker = None
 
         self.radii = radii
@@ -53,17 +55,6 @@ class OursPrecipitationModel(BasePrecipitationModel):
 
         # Pre-compute the convolution of the dbz map with all sector kernels
         img = from_numpy(dbz_img >= threshold).float().unsqueeze(0).unsqueeze(0)   # Shape: (1, 1, H, W)
-        
-        # img = from_numpy(dbz_img / 35).float().unsqueeze(0).unsqueeze(0)   # Shape: (1, 1, H, W)
-
-        # TEST: use f(u,v) = u**2+v**2 instead of the binary mask to see if the convolution works as expected
-        # img = np.zeros_like(dbz_img)  # Create an empty image with the same shape as dbz_img
-        # img = np.arange(img.shape[0])[:, None]**2 + np.arange(img.shape[1])[None, :]**2
-        # img = from_numpy(np.where(dbz_img >= threshold, img, 0)).float().unsqueeze(0).unsqueeze(0)
-
-        # TEST: use f = dBZ value
-        # img = from_numpy(dbz_img).float().unsqueeze(0).unsqueeze(0) 
-
         sectors_convolved_np = fft_conv2d(img=img, kernel=from_numpy(self.kernels).unsqueeze(1).float())
 
         storms = [ShapeVectorStorm(

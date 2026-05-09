@@ -10,7 +10,7 @@ class ClusterIdentifier(BaseStormIdentifier):
     def __init__(self, filter_center: float):
         self.filter_center = filter_center
 
-    def identify_storm(self, dbz_map: np.ndarray, threshold: float) -> list[np.ndarray]:
+    def identify_storm(self, dbz_map: np.ndarray, threshold: float, filter_area: float) -> list[np.ndarray]:
         """
         Implementation of storm identification using clustering algorithm (DBSCAN) in paper *An Improved Storm Cell Identification and Tracking (SCIT) Algorithm based on DBSCAN Clustering and JPDA Tracking Methods*.
 
@@ -22,8 +22,8 @@ class ClusterIdentifier(BaseStormIdentifier):
         """
         thresholds = [t for t in range(threshold, threshold+25, 5)]
 
-        substorms_list = [self._extract_substorms(dbz_map, threshold, self.filter_area) for threshold in thresholds]
-        storms = [storm for storm in substorms_list[0] if np.sum(storm) >= self.filter_area]
+        substorms_list = [self._extract_substorms(dbz_map, threshold, filter_area) for threshold in thresholds]
+        storms = [storm for storm in substorms_list[0] if np.sum(storm) >= filter_area]
 
         for substorms in substorms_list[1:]:
             if len(substorms) == 0:
@@ -34,7 +34,7 @@ class ClusterIdentifier(BaseStormIdentifier):
         contours = []
         for storm in storms:
             contours.extend(cv2.findContours(storm, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0])
-        
+
         return contours
 
 

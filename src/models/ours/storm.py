@@ -103,7 +103,7 @@ class ShapeVectorStorm(StormObject):
                 desc=f"Constructing shape vectors for {self.id}"
             )
         else:
-            vectors = sectors_convolved_np[:, particles[:, 1], particles[:, 0]].T  # shape (num_particles, num_sectors * num_radii)
+            vectors = sectors_convolved_np[:, particles[:, 0], particles[:, 1]].T  # shape (num_particles, num_sectors * num_radii)
 
         self.centroid = (self.contour.centroid.y, self.contour.centroid.x)
         self.shape_vectors = [ShapeVector(

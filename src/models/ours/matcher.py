@@ -14,13 +14,6 @@ from ..base.tracker import MatchedStormPair
 
 from .default import DEFAULT_COARSE_MATCHING_THRESHOLD, DEFAULT_FINE_MATCHING_THRESHOLD
 
-# @dataclass
-# class UpdateInfo:
-#     prev_storm_order: int
-#     curr_storm_order: int
-#     update_type: UpdateType
-#     velocity: np.ndarray = field(default=None)
-
 @dataclass
 class CellSubset:
     """
@@ -57,11 +50,13 @@ class StormMatcher(BaseMatcher):
     weights: tuple[float, float]
     velocity_estimate_weights: tuple[float, float]
 
-    def __init__(self, max_velocity: float, weights: tuple[float, float], velocity_estimate_weights: tuple[float, float]):
+    def __init__(self, max_velocity: float, weights: tuple[float, float], velocity_estimate_weights: tuple[float, float], particle_matching_method: str):
         self.max_velocity = max_velocity
         self.weights = weights
         self.particle_matcher = ParticleMatcher()
         self.velocity_estimate_weights = velocity_estimate_weights
+        self.particle_matching_method = particle_matching_method
+        assert particle_matching_method in ['linear', 'quadratic'], "Unsupported matching method for particle. Supported methods are: 'linear', 'quadratic'."
 
     def _construct_disparity_matrix(self, object_lst1, object_lst2):
         pass
@@ -103,7 +98,7 @@ class StormMatcher(BaseMatcher):
         curr_storms_lst = storms_map_lst_2.storms
 
         matched_info_list = self.particle_matcher.match_storms(
-            prev_storms_list=prev_storms_lst, curr_storms_list=curr_storms_lst, 
+            prev_storms_list=prev_storms_lst, curr_storms_list=curr_storms_lst, matching_method=self.particle_matching_method,
             weights=self.weights, maximum_displacement=maximum_displacement, matching_threshold=coarse_threshold
         )
 
@@ -154,7 +149,8 @@ class StormMatcher(BaseMatcher):
             justified_matched_info_list.extend(
                 self.particle_matcher.match_storms(
                     prev_storms_list=sub_prev_storms, curr_storms_list=sub_curr_storms, 
-                    weights=self.weights, maximum_displacement=maximum_displacement, matching_threshold=fine_threshold
+                    weights=self.weights, maximum_displacement=maximum_displacement, 
+                    matching_threshold=fine_threshold, matching_method=self.particle_matching_method
                 )
             )
         
