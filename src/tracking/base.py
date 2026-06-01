@@ -4,7 +4,7 @@ import numpy as np
 import ot
 from scipy.optimize import linear_sum_assignment
 
-ALPHA = 2e2
+DEFALT_ALPHA = 1e3
 EPSILON = 1e-4
 MAX_ITER = 500
 
@@ -76,7 +76,7 @@ class BaseMatcher(ABC):
         return linear_sum_assignment(cost_matrix)
 
     def _quadratic_assignment(self, internal_cost_1: np.ndarray, internal_cost_2: np.ndarray, 
-                              cost_matrix: np.ndarray, alpha=ALPHA):
+                              cost_matrix: np.ndarray, alpha=DEFALT_ALPHA):
         """
         Matching with quadratic assignment problem (QAP) formulation, solved approximately via entropic fused Gromov-Wasserstein in POT. Where:
             - internal_cost_1: pairwise cost matrix for the first set of objects (e.g., distance between storms in the first frame)

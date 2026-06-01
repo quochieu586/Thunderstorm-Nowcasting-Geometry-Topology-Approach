@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from tqdm.notebook import tqdm
 
 from src.cores.base import StormsMap
-from src.identification import BaseStormIdentifier, HypothesisIdentifier
+from src.identification import BaseStormIdentifier, HypothesisIdentifier, MorphContourIdentifier
 from src.preprocessing import convert_contours_to_polygons
 from src.models.base.model import BasePrecipitationModel
 from src.models.base.tracker import TrackingHistory, UpdateType
@@ -24,12 +24,12 @@ class OursPrecipitationModel(BasePrecipitationModel):
     Attributes:
         identifier (SimpleContourIdentifier): The storm identifier used for identifying storms in radar images.
     """
-    identifier: HypothesisIdentifier
+    identifier: MorphContourIdentifier
     matcher: StormMatcher
     tracker: TrackingHistory
     storms_maps: list[StormsMap]
 
-    def __init__(self, identifier: HypothesisIdentifier, max_velocity: float = DEFAULT_MAX_VELOCITY, weights: tuple[float, float] = DEFAULT_WEIGHTS,
+    def __init__(self, identifier: MorphContourIdentifier, max_velocity: float = DEFAULT_MAX_VELOCITY, weights: tuple[float, float] = DEFAULT_WEIGHTS,
                  radii: list[int] = DEFAULT_RADII, num_sectors: int = DEFAULT_NUM_SECTORS, density: float = DEFAULT_DENSITY,
                  velocity_estimate_weights: tuple[float, float] = (0.5, 0.5), particle_matching_method: str = 'linear'):
         self.identifier = identifier
@@ -44,7 +44,6 @@ class OursPrecipitationModel(BasePrecipitationModel):
         self.density = density
 
         self.kernels = construct_polar_kernels(radii, num_sectors)
-        # self.kernels = construct_polar_kernels_gaussian(radii, num_sectors, sigma_scale=0.5)
     
     def identify_storms(
             self, dbz_img: np.ndarray, time_frame: datetime, map_id: str, threshold: int, filter_area: float
